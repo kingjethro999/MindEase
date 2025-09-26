@@ -1,0 +1,94 @@
+{
+  "expo": {
+    "name": "Mind Ease",
+    "slug": "mind-ease",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/mindeaseicon.png",
+    "scheme": "mindease",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "description": "Your personal mental wellness companion. Track mood, practice mindfulness, and play relaxing games to support your mental health journey.",
+    "platforms": ["ios", "android", "web"],
+    "githubUrl": "https://github.com/kingjethro999/mind-ease",
+    "primaryColor": "#4ECDC4",
+    "backgroundColor": "#1a1a2e",
+    "splash": {
+      "image": "./assets/images/mindeaseicon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1a2e"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mindease.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "This app helps you track your mental wellness and mood patterns.",
+        "NSHealthUpdateUsageDescription": "This app helps you track your mental wellness and mood patterns.",
+        "NSCameraUsageDescription": "This app allows you to take photos for your mood journal entries.",
+        "NSPhotoLibraryUsageDescription": "This app allows you to select photos for your mood journal entries.",
+        "NSMicrophoneUsageDescription": "This app uses the microphone for guided breathing exercises and meditation."
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/mindeaseicon.png",
+        "backgroundColor": "#1a1a2e"
+      },
+      "package": "com.mindease.app",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.VIBRATE",
+        "android.permission.WAKE_LOCK"
+      ],
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/mindeaseicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/mindeaseicon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#1a1a2e"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/mindeaseicon.png",
+          "color": "#4ECDC4",
+          "defaultChannel": "default"
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow Mind Ease to access your microphone for guided breathing exercises."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

@@ -1,0 +1,623 @@
+// AuthContext.tsx
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from './supabase';
+
+interface AuthContextType {
+  session: Session | null;
+  user: User | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string, displayName: string) => Promise<{ error?: string }>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error?: string }>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        return { error: error.message };
+      }
+      
+      return {};
+    } catch (error) {
+      return { error: 'An unexpected error occurred' };
+    }
+  };
+
+  const signUp = async (email: string, password: string, displayName: string) => {
+    try {
+      const { error, data } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      
+      if (error) {
+        return { error: error.message };
+      }
+
+      // Update user profile with display name
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .update({ 
+            display_name: displayName,
+            email: email 
+          })
+          .eq('id', data.user.id);
+
+        if (profileError) {
+          console.warn('Profile update failed:', profileError);
+        }
+      }
+      
+      return {};
+    } catch (error) {
+      return { error: 'An unexpected error occurred' };
+    }
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      
+      if (error) {
+        return { error: error.message };
+      }
+      
+      return {};
+    } catch (error) {
+      return { error: 'An unexpected error occurred' };
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{
+      session,
+      user,
+      loading,
+      signIn,
+      signUp,
+      signOut,
+      resetPassword,
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+// SignInScreen.tsx
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { theme } from './theme';
+import { useAuth } from './AuthContext';
+
+interface SignInScreenProps {
+  navigation: any;
+}
+
+export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
+
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await signIn(email, password);
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('Sign In Failed', error);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoid}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>Sign in to continue your wellness journey</Text>
+          </View>
+
+          <View style={styles.form}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your email"
+                placeholderTextColor={theme.colors.textLight}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your password"
+                placeholderTextColor={theme.colors.textLight}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.forgotPassword}
+              onPress={() => navigation.navigate('ForgotPassword')}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSignIn}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={theme.colors.background} />
+              ) : (
+                <Text style={styles.buttonText}>Sign In</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Don't have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+              <Text style={styles.footerLink}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
+// SignUpScreen.tsx
+export const SignUpScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { signUp } = useAuth();
+
+  const handleSignUp = async () => {
+    if (!email || !password || !confirmPassword || !displayName) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await signUp(email, password, displayName);
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('Sign Up Failed', error);
+    } else {
+      Alert.alert(
+        'Success',
+        'Account created successfully! Please check your email to verify your account.',
+        [{ text: 'OK', onPress: () => navigation.navigate('SignIn') }]
+      );
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoid}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Join MindEase and start your wellness journey</Text>
+          </View>
+
+          <View style={styles.form}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Display Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your name"
+                placeholderTextColor={theme.colors.textLight}
+                value={displayName}
+                onChangeText={setDisplayName}
+                autoCapitalize="words"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your email"
+                placeholderTextColor={theme.colors.textLight}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Create a password"
+                placeholderTextColor={theme.colors.textLight}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Confirm Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm your password"
+                placeholderTextColor={theme.colors.textLight}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSignUp}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={theme.colors.background} />
+              ) : (
+                <Text style={styles.buttonText}>Create Account</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
+              <Text style={styles.footerLink}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
+// ForgotPasswordScreen.tsx
+export const ForgotPasswordScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const { resetPassword } = useAuth();
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email address');
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await resetPassword(email);
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('Error', error);
+    } else {
+      setSent(true);
+    }
+  };
+
+  if (sent) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centeredContainer}>
+          <View style={styles.successContainer}>
+            <Text style={styles.successTitle}>Email Sent!</Text>
+            <Text style={styles.successText}>
+              We've sent a password reset link to {email}. 
+              Please check your email and follow the instructions to reset your password.
+            </Text>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => navigation.navigate('SignIn')}
+            >
+              <Text style={styles.buttonText}>Back to Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoid}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Reset Password</Text>
+            <Text style={styles.subtitle}>
+              Enter your email address and we'll send you a link to reset your password
+            </Text>
+          </View>
+
+          <View style={styles.form}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your email"
+                placeholderTextColor={theme.colors.textLight}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleResetPassword}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={theme.colors.background} />
+              ) : (
+                <Text style={styles.buttonText}>Send Reset Link</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Remember your password? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
+              <Text style={styles.footerLink}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: theme.spacing.md,
+  },
+  centeredContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: theme.spacing.md,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  title: {
+    fontSize: theme.typography.fontSize.h1,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.sm,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: theme.typography.fontSize.body,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: theme.typography.lineHeight.body,
+  },
+  form: {
+    marginBottom: theme.spacing.xl,
+  },
+  inputContainer: {
+    marginBottom: theme.spacing.md,
+  },
+  label: {
+    fontSize: theme.typography.fontSize.body,
+    fontWeight: theme.typography.fontWeight.medium,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+  },
+  input: {
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    fontSize: theme.typography.fontSize.body,
+    color: theme.colors.text,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginBottom: theme.spacing.lg,
+  },
+  forgotPasswordText: {
+    fontSize: theme.typography.fontSize.body,
+    color: theme.colors.primary,
+    fontWeight: theme.typography.fontWeight.medium,
+  },
+  button: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    alignItems: 'center',
+    ...theme.shadows.sm,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    fontSize: theme.typography.fontSize.body,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.background,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: theme.typography.fontSize.body,
+    color: theme.colors.textSecondary,
+  },
+  footerLink: {
+    fontSize: theme.typography.fontSize.body,
+    color: theme.colors.primary,
+    fontWeight: theme.typography.fontWeight.medium,
+  },
+  successContainer: {
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.xl,
+    alignItems: 'center',
+    ...theme.shadows.md,
+  },
+  successTitle: {
+    fontSize: theme.typography.fontSize.h2,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.success,
+    marginBottom: theme.spacing.md,
+    textAlign: 'center',
+  },
+  successText: {
+    fontSize: theme.typography.fontSize.body,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: theme.typography.lineHeight.body,
+    marginBottom: theme.spacing.lg,
+  },
+});
+
+// AuthNavigator.tsx - Navigation setup example 
+we dont use stack navigation in this directory
+import { createStackNavigator } from '@react-navigation/stack';
+const Stack = createStackNavigator();
+export const AuthNavigator = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="SignIn" component={SignInScreen} />
+      <Stack.Screen name="SignUp" component={SignUpScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+    </Stack.Navigator>
+  );
+};
+
+// Usage example in App.tsx
+export const App = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
+  return user ? <MainApp /> : <AuthNavigator />;
+};

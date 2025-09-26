@@ -1,0 +1,85 @@
+# SOUND EFFECTS LIST FOR MIND EASE GAMES
+# ======================================
+
+This file contains a list of all sound effects that were removed from the games.
+When you get the actual audio files, let me know and I'll re-implement the sound system.
+
+## GAME SOUND EFFECTS NEEDED:
+
+### 1. BUBBLE POP CALM GAME
+- **File:** `bubble_pop.mp3`
+- **Usage:** Played when user pops a bubble
+- **Description:** Soft, satisfying pop sound
+- **Location:** `app/nonTabs/bubblePopGame.tsx` - `popBubble()` function
+
+### 2. BREATHING SYNC GAME
+- **File:** `breathing_guide.mp3`
+- **Usage:** Ambient breathing guide sound
+- **Description:** Calming, rhythmic breathing sound
+- **Location:** `app/nonTabs/breathingSyncGame.tsx` - Background audio
+
+### 3. SOOTHING PUZZLE GAME
+- **File:** `puzzle_place.mp3`
+- **Usage:** Played when user correctly places a puzzle piece
+- **Description:** Gentle, satisfying placement sound
+- **Location:** `app/nonTabs/soothingPuzzleGame.tsx` - `handlePiecePress()` function
+
+### 4. COLOR HARMONY GAME
+- **File:** `color_match.mp3`
+- **Usage:** Played when user matches a color correctly
+- **Description:** Pleasant, harmonious match sound
+- **Location:** `app/nonTabs/colorHarmonyGame.tsx` - `handleTilePress()` function
+
+### 5. TIC-TAC-TOE GAME
+- **File:** `tic_tac_toe.mp3`
+- **Usage:** Played when user makes a move
+- **Description:** Soft, strategic move sound
+- **Location:** `app/nonTabs/ticTacToeGame.tsx` - `makeMove()` function
+
+## IMPLEMENTATION NOTES:
+
+### Sound File Requirements:
+- Format: MP3
+- Quality: 44.1kHz, 16-bit minimum
+- Duration: 0.5-2 seconds per sound
+- Volume: Moderate (not too loud)
+- Style: Calming, relaxing, non-intrusive
+
+### File Structure:
+```
+/home/king/Documents/mind_ease/
+├── sounds/
+│   ├── bubble_pop.mp3
+│   ├── breathing_guide.mp3
+│   ├── puzzle_place.mp3
+│   ├── color_match.mp3
+│   └── tic_tac_toe.mp3
+```
+
+### Code Integration:
+When you have the sound files, I'll need to:
+1. Add the `sounds/` folder to the project
+2. Re-import `react-native-sound` in each game file
+3. Re-add the sound initialization code
+4. Re-add the sound playback calls
+5. Update the file paths to point to the correct sound files
+
+### Dependencies:
+- `react-native-sound` (already installed)
+- Sound files in MP3 format
+
+## CURRENT STATUS:
+✅ Sound code removed from all games
+✅ Games work without sound effects
+✅ All animations and game logic intact
+⏳ Waiting for sound files to be provided
+
+## NEXT STEPS:
+1. Get the sound files (MP3 format)
+2. Place them in `/home/king/Documents/mind_ease/sounds/`
+3. Let me know when ready
+4. I'll re-implement the sound system
+
+---
+*Last updated: $(date)*
+*Games affected: 5 (Bubble Pop, Breathing Sync, Soothing Puzzle, Color Harmony, Tic-Tac-Toe)*
