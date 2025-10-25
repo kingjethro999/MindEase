@@ -327,9 +327,9 @@ export default function ExerciseDetailsScreen() {
       
       // Create completion data matching database schema
       const completionData: Omit<ExerciseCompletion, 'id' | 'synced'> = {
-        userId,
-        activityType: activityType as any,
-        activityDetails: {
+        user_id: userId,
+        activity_type: activityType as any,
+        activity_details: {
           exerciseId: exercise.id,
           exerciseTitle: exercise.title,
           exerciseType: exercise.type,
@@ -337,8 +337,8 @@ export default function ExerciseDetailsScreen() {
           intensity: 1,
           notes: `Completed ${exercise.title}`
         },
-        completedAt: new Date().toISOString(),
-        streakCount: 1 // This will be calculated properly in the gamification system
+        completed_at: new Date().toISOString(),
+        streak_count: 1 // This will be calculated properly in the gamification system
       };
 
       // Save exercise completion

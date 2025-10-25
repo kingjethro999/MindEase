@@ -23,22 +23,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../theme/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAlert } from '../../contexts/AlertContext';
+import { useTranslation } from '../../contexts/TranslationContext';
+import { getSupportedLanguages } from '../../utils/translations';
 import { 
   getUserProfile, 
   saveUserProfile, 
   clearAllOfflineData,
   getExerciseCompletions,
   getMoodEntries,
-  getAchievements
+  getAchievements,
+  getAppSettings,
+  saveAppSettings,
+  updateAppSettings
 } from '../../utils/offlineStorage';
 import { generateExportData, generateTextReport, shareData, saveDataToDevice } from '../../utils/exportUtils';
 import UserEditModal from '../../components/UserEditModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import notificationService from '../../services/NotificationService';
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
   const { showAlert, showConfirm } = useAlert();
+  const { t, language: currentLanguage, setLanguage: setCurrentLanguage } = useTranslation();
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showUserEditModal, setShowUserEditModal] = useState(false);
@@ -70,17 +77,24 @@ export default function SettingsScreen() {
 
   const loadUserSettings = async () => {
     try {
-      const profile = await getUserProfile();
+      const [profile, appSettingsData] = await Promise.all([
+        getUserProfile(),
+        getAppSettings()
+      ]);
+      
       if (profile) {
         setUserProfile(profile);
         setNotifications({
-          dailyReminder: profile.notificationPreferences?.dailyReminder ?? true,
-          affirmations: profile.notificationPreferences?.affirmations ?? true,
-          weeklyReports: profile.notificationPreferences?.weeklyReports ?? true
+          dailyReminder: profile.notification_preferences?.daily_reminder ?? true,
+          affirmations: profile.notification_preferences?.affirmations ?? true,
+          weeklyReports: profile.notification_preferences?.weekly_reports ?? true
         });
-        setLanguage(profile.languagePreference || 'en');
+        setLanguage(profile.language_preference || 'en');
         setTimezone(profile.timezone || 'UTC');
       }
+      
+      // Load app settings
+      setAppSettings(appSettingsData);
     } catch (error) {
       console.error('Error loading user settings:', error);
     } finally {
@@ -90,35 +104,40 @@ export default function SettingsScreen() {
 
   const saveSettings = async () => {
     try {
+      // Save user profile settings
       if (userProfile) {
         const updatedProfile = {
           ...userProfile,
-          notificationPreferences: notifications,
-          languagePreference: language,
+          notification_preferences: notifications,
+          language_preference: language,
           timezone: timezone,
         };
         await saveUserProfile(updatedProfile);
         setUserProfile(updatedProfile);
-        showAlert({
-          type: 'success',
-          title: 'Success',
-          message: 'Settings saved successfully!'
-        });
       }
+      
+      // Save app settings
+      await saveAppSettings(appSettings);
+      
+      showAlert({
+        type: 'success',
+        title: t('success'),
+        message: t('settingsSavedSuccessfully')
+      });
     } catch (error) {
       console.error('Error saving settings:', error);
       showAlert({
         type: 'error',
-        title: 'Error',
-        message: 'Failed to save settings. Please try again.'
+        title: t('error'),
+        message: t('failedToSaveSettings')
       });
     }
   };
 
   const handleSignOut = () => {
     showConfirm(
-      'Sign Out',
-      'Are you sure you want to sign out?',
+      t('confirmSignOut'),
+      t('areYouSureYouWantToSignOut'),
       async () => {
         try {
           await signOut();
@@ -132,53 +151,55 @@ export default function SettingsScreen() {
 
   const handleClearData = () => {
     showConfirm(
-      'Clear All Data',
-      'This will permanently delete all your local data including mood entries, exercise history, and achievements. This action cannot be undone.',
+      t('clearAllDataTitle'),
+      t('clearAllDataMessage'),
       async () => {
         try {
           await clearAllOfflineData();
           showAlert({
             type: 'success',
-            title: 'Success',
-            message: 'All data has been cleared.'
+            title: t('success'),
+            message: t('allDataCleared')
           });
         } catch (error) {
           console.error('Error clearing data:', error);
           showAlert({
             type: 'error',
-            title: 'Error',
-            message: 'Failed to clear data. Please try again.'
+            title: t('error'),
+            message: t('failedToClearData')
           });
         }
       }
     );
   };
 
-  const handleCloudBackup = async () => {
+  const handleCloudBackup = async (value: boolean) => {
     try {
-      if (!appSettings.cloudBackup) {
-        // Enable cloud backup
-        setAppSettings(prev => ({ ...prev, cloudBackup: true }));
+      const updatedSettings = { ...appSettings, cloudBackup: value };
+      setAppSettings(updatedSettings);
+      
+      // Save immediately to AsyncStorage
+      await updateAppSettings({ cloudBackup: value });
+      
+      if (value) {
         showAlert({
           type: 'success',
-          title: 'Cloud Backup Enabled',
-          message: 'Your data will now be automatically backed up to the cloud when you have an internet connection.'
+          title: t('cloudBackupEnabled'),
+          message: t('cloudBackupEnabledMessage')
         });
       } else {
-        // Disable cloud backup
-        setAppSettings(prev => ({ ...prev, cloudBackup: false }));
         showAlert({
           type: 'info',
-          title: 'Cloud Backup Disabled',
-          message: 'Your data will only be stored locally on this device.'
+          title: t('cloudBackupDisabled'),
+          message: t('cloudBackupDisabledSyncMessage')
         });
       }
     } catch (error) {
       console.error('Error with cloud backup:', error);
       showAlert({
         type: 'error',
-        title: 'Error',
-        message: 'Failed to update cloud backup settings.'
+        title: t('error'),
+        message: t('cloudBackupError')
       });
     }
   };
@@ -206,52 +227,56 @@ export default function SettingsScreen() {
     try {
       showAlert({
         type: 'info',
-        title: 'Exporting Data',
-        message: 'Generating your wellness report...'
+        title: t('exportingData'),
+        message: t('generatingYourWellnessReport')
       });
 
       const exportData = await generateExportData();
       
       showAlert({
         type: 'success',
-        title: 'Export Complete',
-        message: `Your wellness report has been generated with ${exportData.moodEntries.length} mood entries, ${exportData.exerciseCompletions.length} exercises, and ${exportData.journalEntries.length} journal entries.`,
+        title: t('exportComplete'),
+        message: t('exportCompleteMessage', {
+          moodEntries: exportData.moodEntries.length,
+          exercises: exportData.exerciseCompletions.length,
+          journalEntries: exportData.journalEntries.length
+        }),
         buttons: [
-          { text: 'Save to Device', onPress: async () => {
+          { text: t('saveToDevice'), onPress: async () => {
             try {
               const filePath = await saveDataToDevice(exportData, 'text');
               showAlert({
                 type: 'success',
-                title: 'Saved Successfully',
+                title: t('savedSuccessfully'),
                 message: `Report saved to: ${filePath}`
               });
             } catch (error) {
               showAlert({
                 type: 'error',
-                title: 'Save Failed',
+                title: t('saveFailed'),
                 message: 'Failed to save report to device.'
               });
             }
           }},
-          { text: 'Share Report', onPress: async () => {
+          { text: t('shareReport'), onPress: async () => {
             try {
               await shareData(exportData, 'text');
             } catch (error) {
               showAlert({
                 type: 'error',
-                title: 'Share Failed',
+                title: t('shareFailed'),
                 message: 'Failed to share report. Please try again.'
               });
             }
           }},
-          { text: 'Cancel', style: 'cancel' }
+          { text: t('cancel'), style: 'cancel' }
         ]
       });
     } catch (error) {
       console.error('Error exporting data:', error);
       showAlert({
         type: 'error',
-        title: 'Export Failed',
+        title: t('exportFailed'),
         message: 'Failed to export your data. Please try again.'
       });
     }
@@ -267,15 +292,15 @@ export default function SettingsScreen() {
       setUserProfile(updatedProfile);
       showAlert({
         type: 'success',
-        title: 'Success',
-        message: 'Profile updated successfully!'
+        title: t('success'),
+        message: t('profileUpdatedSuccessfully')
       });
     } catch (error) {
       console.error('Error saving updated profile:', error);
       showAlert({
         type: 'error',
-        title: 'Error',
-        message: 'Failed to save profile changes locally.'
+        title: t('error'),
+        message: t('failedToSaveProfile')
       });
     }
   };
@@ -308,8 +333,8 @@ export default function SettingsScreen() {
         if (status !== 'granted') {
           showAlert({
             type: 'error',
-            title: 'Permission Required',
-            message: 'Please enable notifications in your device settings to receive reminders.'
+            title: t('permissionRequired'),
+            message: t('permissionRequiredMessage')
           });
           return;
         }
@@ -318,137 +343,51 @@ export default function SettingsScreen() {
 
       setNotifications(prev => ({ ...prev, [type]: value }));
       
-      // Schedule/cancel notifications based on type
-      if (type === 'dailyReminder' && value) {
-        await scheduleDailyReminder();
-      } else if (type === 'dailyReminder' && !value) {
-        await cancelDailyReminder();
-      }
+      // Update notification service settings
+      const serviceSettings = {
+        enabled: notifications.dailyReminder || notifications.affirmations || notifications.weeklyReports,
+        dailyReminder: notifications.dailyReminder,
+        dailyAffirmation: notifications.affirmations,
+        weeklyReport: notifications.weeklyReports,
+        exerciseReminders: false,
+      };
       
-      if (type === 'affirmations' && value) {
-        await scheduleAffirmations();
-      } else if (type === 'affirmations' && !value) {
-        await cancelAffirmations();
-      }
+      // Save settings first
+      await notificationService.saveSettings(serviceSettings);
       
-      if (type === 'weeklyReports' && value) {
-        await scheduleWeeklyReports();
-      } else if (type === 'weeklyReports' && !value) {
-        await cancelWeeklyReports();
+      // Then enable/disable notifications based on user choice
+      if (serviceSettings.enabled) {
+        await notificationService.enableNotifications();
+      } else {
+        await notificationService.disableNotifications();
       }
     } catch (error) {
       console.error('Error handling notification toggle:', error);
       showAlert({
         type: 'error',
-        title: 'Error',
+        title: t('error'),
         message: 'Failed to update notification settings.'
       });
     }
   };
 
-  // Schedule daily reminder
-  const scheduleDailyReminder = async () => {
+
+  // Test notification
+  const testNotification = async () => {
     try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'Daily Check-in',
-          body: 'How are you feeling today? Take a moment to log your mood.',
-          sound: true,
-        },
-        trigger: {
-          hour: 9,
-          minute: 0,
-          repeats: true,
-        } as any,
+      await notificationService.sendTestNotification();
+      showAlert({
+        type: 'success',
+        title: 'Test Notification Sent',
+        message: 'You should receive a test notification in 2 seconds.'
       });
     } catch (error) {
-      console.error('Error scheduling daily reminder:', error);
-    }
-  };
-
-  // Cancel daily reminder
-  const cancelDailyReminder = async () => {
-    try {
-      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-      const dailyReminder = scheduledNotifications.find(notification => 
-        notification.content.title === 'Daily Check-in'
-      );
-      if (dailyReminder) {
-        await Notifications.cancelScheduledNotificationAsync(dailyReminder.identifier);
-      }
-    } catch (error) {
-      console.error('Error canceling daily reminder:', error);
-    }
-  };
-
-  // Schedule affirmations
-  const scheduleAffirmations = async () => {
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'Daily Affirmation',
-          body: 'You are capable, strong, and worthy of happiness. Take a deep breath and believe in yourself.',
-          sound: true,
-        },
-        trigger: {
-          hour: 8,
-          minute: 0,
-          repeats: true,
-        } as any,
+      console.error('Error sending test notification:', error);
+      showAlert({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to send test notification.'
       });
-    } catch (error) {
-      console.error('Error scheduling affirmations:', error);
-    }
-  };
-
-  // Cancel affirmations
-  const cancelAffirmations = async () => {
-    try {
-      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-      const affirmation = scheduledNotifications.find(notification => 
-        notification.content.title === 'Daily Affirmation'
-      );
-      if (affirmation) {
-        await Notifications.cancelScheduledNotificationAsync(affirmation.identifier);
-      }
-    } catch (error) {
-      console.error('Error canceling affirmations:', error);
-    }
-  };
-
-  // Schedule weekly reports
-  const scheduleWeeklyReports = async () => {
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'Weekly Report Ready',
-          body: 'Your weekly wellness report is ready! Check your progress and insights.',
-          sound: true,
-        },
-        trigger: {
-          weekday: 1, // Monday
-          hour: 10,
-          minute: 0,
-          repeats: true,
-        } as any,
-      });
-    } catch (error) {
-      console.error('Error scheduling weekly reports:', error);
-    }
-  };
-
-  // Cancel weekly reports
-  const cancelWeeklyReports = async () => {
-    try {
-      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-      const weeklyReport = scheduledNotifications.find(notification => 
-        notification.content.title === 'Weekly Report Ready'
-      );
-      if (weeklyReport) {
-        await Notifications.cancelScheduledNotificationAsync(weeklyReport.identifier);
-      }
-    } catch (error) {
-      console.error('Error canceling weekly reports:', error);
     }
   };
 
@@ -459,14 +398,14 @@ export default function SettingsScreen() {
       await AsyncStorage.setItem('darkMode', value.toString());
       showAlert({
         type: 'info',
-        title: 'Theme Updated',
-        message: value ? 'Dark mode enabled. Restart the app to see changes.' : 'Light mode enabled. Restart the app to see changes.'
+        title: t('themeUpdated'),
+        message: value ? t('darkModeEnabled') : t('lightModeEnabled')
       });
     } catch (error) {
       console.error('Error toggling dark mode:', error);
       showAlert({
         type: 'error',
-        title: 'Error',
+        title: t('error'),
         message: 'Failed to update theme preference.'
       });
     }
@@ -474,12 +413,22 @@ export default function SettingsScreen() {
 
   // Handle language selection
   const handleLanguageSelection = () => {
+    const supportedLanguages = getSupportedLanguages();
+    const languageOptions = supportedLanguages.map(lang => ({
+      label: lang.nativeName,
+      value: lang.code
+    }));
+    
     showAlert({
       type: 'info',
-      title: 'Language Selection',
-      message: 'Language selection will be available in a future update. Currently supporting English only.',
+      title: t('languageSelection'),
+      message: t('selectYourPreferredLanguage'),
       buttons: [
-        { text: 'OK', style: 'default' }
+        ...languageOptions.map(lang => ({
+          text: lang.label,
+          onPress: () => setCurrentLanguage(lang.value)
+        })),
+        { text: t('cancel'), style: 'cancel' }
       ]
     });
   };
@@ -488,11 +437,11 @@ export default function SettingsScreen() {
   const handleHelpSupport = () => {
     showAlert({
       type: 'info',
-      title: 'Help & Support',
-      message: 'For support, please contact us at:\n\nEmail: support@mindease.app\n\nOr visit our help center for FAQs and guides.',
+      title: t('helpAndSupportTitle'),
+      message: t('helpAndSupportMessage'),
       buttons: [
-        { text: 'Contact Support', onPress: () => Linking.openURL('mailto:support@mindease.app') },
-        { text: 'Cancel', style: 'cancel' }
+        { text: t('contactSupport'), onPress: () => Linking.openURL('mailto:jethrojerrybj@gmail.com') },
+        { text: t('cancel'), style: 'cancel' }
       ]
     });
   };
@@ -501,11 +450,11 @@ export default function SettingsScreen() {
   const handlePrivacyPolicy = () => {
     showAlert({
       type: 'info',
-      title: 'Privacy Policy',
-      message: 'Your privacy is important to us. All your data is stored locally on your device and is never shared without your explicit consent.\n\nKey points:\n• Data is stored locally by default\n• Cloud backup is optional\n• No data is sold to third parties\n• You can export or delete your data anytime',
+      title: t('privacyPolicyTitle'),
+      message: t('privacyPolicyMessage'),
       buttons: [
-        { text: 'View Full Policy', onPress: () => Linking.openURL('https://mindease.app/privacy') },
-        { text: 'OK', style: 'default' }
+        { text: t('viewFullPolicy'), onPress: () => Linking.openURL('https://mindease.app/privacy') },
+        { text: t('ok'), style: 'default' }
       ]
     });
   };
@@ -516,15 +465,15 @@ export default function SettingsScreen() {
       if (!appSettings.cloudBackup) {
         showAlert({
           type: 'error',
-          title: 'Cloud Backup Disabled',
-          message: 'Please enable cloud backup first to sync your data.'
+          title: t('cloudBackupDisabledTitle'),
+          message: t('cloudBackupDisabledSyncMessage')
         });
         return;
       }
 
       showAlert({
         type: 'info',
-        title: 'Backing Up Data',
+        title: t('backingUpData'),
         message: 'Your data is being backed up to the cloud. This may take a few moments...'
       });
 
@@ -532,7 +481,7 @@ export default function SettingsScreen() {
       setTimeout(() => {
         showAlert({
           type: 'success',
-          title: 'Backup Complete',
+          title: t('backupComplete'),
           message: 'Your data has been successfully backed up to the cloud.'
         });
       }, 2000);
@@ -540,7 +489,7 @@ export default function SettingsScreen() {
       console.error('Error backing up data:', error);
       showAlert({
         type: 'error',
-        title: 'Backup Failed',
+        title: t('backupFailed'),
         message: 'Failed to backup your data. Please check your internet connection and try again.'
       });
     }
@@ -552,20 +501,20 @@ export default function SettingsScreen() {
       if (!appSettings.cloudBackup) {
         showAlert({
           type: 'error',
-          title: 'Cloud Backup Disabled',
+          title: t('cloudBackupDisabledTitle'),
           message: 'Please enable cloud backup first to restore your data.'
         });
         return;
       }
 
       showConfirm(
-        'Restore Data',
-        'This will replace your current local data with the data from the cloud. Are you sure you want to continue?',
+        t('restoreDataTitle'),
+        t('restoreDataMessage'),
         async () => {
           try {
             showAlert({
               type: 'info',
-              title: 'Restoring Data',
+              title: t('restoringData'),
               message: 'Your data is being restored from the cloud. This may take a few moments...'
             });
 
@@ -573,7 +522,7 @@ export default function SettingsScreen() {
             setTimeout(() => {
               showAlert({
                 type: 'success',
-                title: 'Restore Complete',
+                title: t('restoreComplete'),
                 message: 'Your data has been successfully restored from the cloud.'
               });
             }, 2000);
@@ -581,7 +530,7 @@ export default function SettingsScreen() {
             console.error('Error restoring data:', error);
             showAlert({
               type: 'error',
-              title: 'Restore Failed',
+              title: t('restoreFailed'),
               message: 'Failed to restore your data. Please check your internet connection and try again.'
             });
           }
@@ -596,7 +545,7 @@ export default function SettingsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading settings...</Text>
+          <Text style={styles.loadingText}>{t('loading')} settings...</Text>
         </View>
       </SafeAreaView>
     );
@@ -614,7 +563,7 @@ export default function SettingsScreen() {
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <SettingsIcon size={24} color={theme.colors.primary} />
-          <Text style={styles.headerTitle}>Settings</Text>
+          <Text style={styles.headerTitle}>{t('settings')}</Text>
         </View>
         <View style={styles.headerSpacer} />
       </View>
@@ -622,15 +571,15 @@ export default function SettingsScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* User Profile Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
+          <Text style={styles.sectionTitle}>{t('account')}</Text>
           <TouchableOpacity style={styles.settingItem} onPress={handleUserEdit}>
             <View style={styles.settingIcon}>
               <User size={20} color={theme.colors.primary} />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Profile</Text>
+              <Text style={styles.settingTitle}>{t('profile')}</Text>
               <Text style={styles.settingSubtitle}>
-                {userProfile?.displayName || user?.user_metadata?.full_name || user?.email || 'Anonymous User'}
+                {userProfile?.displayName || user?.user_metadata?.full_name || user?.email || t('anonymousUser')}
               </Text>
             </View>
             <ChevronRight size={20} color={theme.colors.textSecondary} />
@@ -639,15 +588,15 @@ export default function SettingsScreen() {
 
         {/* Notifications Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
+          <Text style={styles.sectionTitle}>{t('notifications')}</Text>
           
           <View style={styles.settingItem}>
             <View style={styles.settingIcon}>
               <Bell size={20} color={theme.colors.primary} />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Daily Reminders</Text>
-              <Text style={styles.settingSubtitle}>Daily mood check-in reminders</Text>
+              <Text style={styles.settingTitle}>{t('dailyReminders')}</Text>
+              <Text style={styles.settingSubtitle}>{t('dailyMoodCheckInReminders')}</Text>
             </View>
             <Switch
               value={notifications.dailyReminder}
@@ -662,8 +611,8 @@ export default function SettingsScreen() {
               <Bell size={20} color={theme.colors.primary} />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Affirmations</Text>
-              <Text style={styles.settingSubtitle}>Daily positive affirmations</Text>
+              <Text style={styles.settingTitle}>{t('affirmations')}</Text>
+              <Text style={styles.settingSubtitle}>{t('dailyPositiveAffirmations')}</Text>
             </View>
             <Switch
               value={notifications.affirmations}
@@ -678,8 +627,8 @@ export default function SettingsScreen() {
               <Bell size={20} color={theme.colors.primary} />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Weekly Reports</Text>
-              <Text style={styles.settingSubtitle}>Weekly progress summaries</Text>
+              <Text style={styles.settingTitle}>{t('weeklyReports')}</Text>
+              <Text style={styles.settingSubtitle}>{t('weeklyProgressSummaries')}</Text>
             </View>
             <Switch
               value={notifications.weeklyReports}
@@ -689,23 +638,29 @@ export default function SettingsScreen() {
             />
           </View>
 
+          {/* Test Notification Button */}
+          <TouchableOpacity style={styles.testNotificationButton} onPress={testNotification}>
+            <Bell size={20} color={theme.colors.primary} />
+            <Text style={styles.testNotificationText}>Test Notification</Text>
+          </TouchableOpacity>
+
         </View>
 
         {/* Privacy & Data Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Privacy & Data</Text>
+          <Text style={styles.sectionTitle}>{t('privacyAndData')}</Text>
           
           <View style={styles.settingItem}>
             <View style={styles.settingIcon}>
               <Cloud size={20} color={theme.colors.primary} />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Cloud Backup</Text>
-              <Text style={styles.settingSubtitle}>Sync data across devices</Text>
+              <Text style={styles.settingTitle}>{t('cloudBackup')}</Text>
+              <Text style={styles.settingSubtitle}>{t('syncDataAcrossDevices')}</Text>
             </View>
             <Switch
               value={appSettings.cloudBackup}
-              onValueChange={(value) => setAppSettings(prev => ({ ...prev, cloudBackup: value }))}
+              onValueChange={handleCloudBackup}
               trackColor={{ false: theme.colors.border, true: theme.colors.primary + '40' }}
               thumbColor={appSettings.cloudBackup ? theme.colors.primary : theme.colors.textSecondary}
             />
@@ -716,8 +671,8 @@ export default function SettingsScreen() {
               <Upload size={20} color={theme.colors.primary} />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Backup Now</Text>
-              <Text style={styles.settingSubtitle}>Upload data to cloud</Text>
+              <Text style={styles.settingTitle}>{t('backupNow')}</Text>
+              <Text style={styles.settingSubtitle}>{t('uploadDataToCloud')}</Text>
             </View>
             <ChevronRight size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
@@ -727,8 +682,8 @@ export default function SettingsScreen() {
               <Download size={20} color={theme.colors.primary} />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Restore Data</Text>
-              <Text style={styles.settingSubtitle}>Download from cloud</Text>
+              <Text style={styles.settingTitle}>{t('restoreData')}</Text>
+              <Text style={styles.settingSubtitle}>{t('downloadFromCloud')}</Text>
             </View>
             <ChevronRight size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
@@ -736,31 +691,15 @@ export default function SettingsScreen() {
 
         {/* App Preferences Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>App Preferences</Text>
-          
-          <View style={styles.settingItem}>
-            <View style={styles.settingIcon}>
-              <Moon size={20} color={theme.colors.primary} />
-            </View>
-            <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Dark Mode</Text>
-              <Text style={styles.settingSubtitle}>Use dark theme</Text>
-            </View>
-            <Switch
-              value={isDarkMode}
-              onValueChange={handleDarkModeToggle}
-              trackColor={{ false: theme.colors.border, true: theme.colors.primary + '40' }}
-              thumbColor={isDarkMode ? theme.colors.primary : theme.colors.textSecondary}
-            />
-          </View>
+          <Text style={styles.sectionTitle}>{t('appPreferences')}</Text>
 
           <TouchableOpacity style={styles.settingItem} onPress={handleLanguageSelection}>
             <View style={styles.settingIcon}>
               <Globe size={20} color={theme.colors.primary} />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Language</Text>
-              <Text style={styles.settingSubtitle}>English</Text>
+              <Text style={styles.settingTitle}>{t('language')}</Text>
+              <Text style={styles.settingSubtitle}>{getSupportedLanguages().find(lang => lang.code === currentLanguage)?.nativeName || t('english')}</Text>
             </View>
             <ChevronRight size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
@@ -768,15 +707,15 @@ export default function SettingsScreen() {
 
         {/* Data Management Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Data Management</Text>
+          <Text style={styles.sectionTitle}>{t('dataManagement')}</Text>
           
           <TouchableOpacity style={styles.settingItem} onPress={handleExportData}>
             <View style={styles.settingIcon}>
               <Download size={20} color={theme.colors.primary} />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Export Data</Text>
-              <Text style={styles.settingSubtitle}>Download your wellness report</Text>
+              <Text style={styles.settingTitle}>{t('exportData')}</Text>
+              <Text style={styles.settingSubtitle}>{t('downloadYourWellnessReport')}</Text>
             </View>
             <ChevronRight size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
@@ -786,8 +725,8 @@ export default function SettingsScreen() {
               <Trash2 size={20} color={theme.colors.error} />
             </View>
             <View style={styles.settingContent}>
-              <Text style={[styles.settingTitle, { color: theme.colors.error }]}>Clear All Data</Text>
-              <Text style={styles.settingSubtitle}>Delete all local data</Text>
+              <Text style={[styles.settingTitle, { color: theme.colors.error }]}>{t('clearAllData')}</Text>
+              <Text style={styles.settingSubtitle}>{t('deleteAllLocalData')}</Text>
             </View>
             <ChevronRight size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
@@ -795,15 +734,15 @@ export default function SettingsScreen() {
 
         {/* Support Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Support</Text>
+          <Text style={styles.sectionTitle}>{t('support')}</Text>
           
           <TouchableOpacity style={styles.settingItem} onPress={handleHelpSupport}>
             <View style={styles.settingIcon}>
               <HelpCircle size={20} color={theme.colors.primary} />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Help & Support</Text>
-              <Text style={styles.settingSubtitle}>Get help and contact support</Text>
+              <Text style={styles.settingTitle}>{t('helpAndSupport')}</Text>
+              <Text style={styles.settingSubtitle}>{t('getHelpAndContactSupport')}</Text>
             </View>
             <ChevronRight size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
@@ -813,8 +752,8 @@ export default function SettingsScreen() {
               <Shield size={20} color={theme.colors.primary} />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Privacy Policy</Text>
-              <Text style={styles.settingSubtitle}>Read our privacy policy</Text>
+              <Text style={styles.settingTitle}>{t('privacyPolicy')}</Text>
+              <Text style={styles.settingSubtitle}>{t('readOurPrivacyPolicy')}</Text>
             </View>
             <ChevronRight size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
@@ -828,8 +767,8 @@ export default function SettingsScreen() {
                 <LogOut size={20} color={theme.colors.error} />
               </View>
               <View style={styles.settingContent}>
-                <Text style={[styles.settingTitle, { color: theme.colors.error }]}>Sign Out</Text>
-                <Text style={styles.settingSubtitle}>Sign out of your account</Text>
+                <Text style={[styles.settingTitle, { color: theme.colors.error }]}>{t('signOut')}</Text>
+                <Text style={styles.settingSubtitle}>{t('signOutOfYourAccount')}</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -837,12 +776,12 @@ export default function SettingsScreen() {
 
         {/* Save Button */}
         <TouchableOpacity style={styles.saveButton} onPress={saveSettings}>
-          <Text style={styles.saveButtonText}>Save Settings</Text>
+          <Text style={styles.saveButtonText}>{t('saveSettings')}</Text>
         </TouchableOpacity>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>MindEase v1.0.0</Text>
-          <Text style={styles.footerText}>Your mental wellness companion</Text>
+          <Text style={styles.footerText}>{t('mindEaseVersion')}</Text>
+          <Text style={styles.footerText}>{t('yourMentalWellnessCompanion')}</Text>
         </View>
       </ScrollView>
 
@@ -921,6 +860,23 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
+  },
+  testNotificationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary + '10',
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    marginTop: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '30',
+    gap: theme.spacing.sm,
+  },
+  testNotificationText: {
+    fontSize: theme.typography.fontSize.body,
+    color: theme.colors.primary,
+    fontWeight: theme.typography.fontWeight.medium as any,
   },
   settingIcon: {
     width: 40,

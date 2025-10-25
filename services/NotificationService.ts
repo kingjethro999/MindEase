@@ -18,10 +18,10 @@ class NotificationService {
 
   constructor() {
     this.settings = {
-      enabled: true,
-      dailyReminder: true,
-      dailyAffirmation: true,
-      weeklyReport: true,
+      enabled: false, // Default to disabled
+      dailyReminder: false,
+      dailyAffirmation: false,
+      weeklyReport: false,
       exerciseReminders: false,
     };
   }
@@ -32,17 +32,17 @@ class NotificationService {
       await this.loadSettings();
       
       // Request permissions
-      await this.requestPermissions();
+      const hasPermission = await this.requestPermissions();
+      
+      if (!hasPermission) {
+        console.log('Notification permissions not granted, skipping initialization');
+        return;
+      }
       
       // Set notification handler
       this.setNotificationHandler();
       
-      // Schedule default notifications if enabled
-      if (this.settings.enabled) {
-        await this.scheduleDefaultNotifications();
-      }
-      
-      console.log('Notification service initialized');
+      console.log('Notification service initialized successfully');
     } catch (error) {
       console.error('Error initializing notification service:', error);
     }
@@ -80,9 +80,9 @@ class NotificationService {
     });
   }
 
-  async scheduleDefaultNotifications(): Promise<void> {
+  async scheduleNotifications(): Promise<void> {
     try {
-      // Cancel any existing notifications
+      // Cancel any existing notifications first
       await Notifications.cancelAllScheduledNotificationsAsync();
 
       if (this.settings.dailyReminder) {
@@ -97,25 +97,42 @@ class NotificationService {
         await this.scheduleWeeklyReport();
       }
 
-      console.log('Default notifications scheduled successfully');
+      console.log('Notifications scheduled successfully');
     } catch (error) {
       console.error('Error scheduling notifications:', error);
     }
   }
 
   async scheduleDailyReminder(): Promise<void> {
+    // Calculate next occurrence of 9 AM (morning reminder)
+    const now = new Date();
+    const scheduledTime = new Date();
+    scheduledTime.setHours(9, 0, 0, 0); // 9 AM
+    
+    // If it's already past 9 AM today, schedule for tomorrow
+    if (now >= scheduledTime) {
+      scheduledTime.setDate(scheduledTime.getDate() + 1);
+    }
+    
+    // Ensure the scheduled time is at least 1 minute in the future
+    const minTime = new Date(now.getTime() + 60000); // 1 minute from now
+    if (scheduledTime < minTime) {
+      scheduledTime.setTime(minTime.getTime());
+    }
+    
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'Time to check in!',
-        body: 'How are you feeling today? Track your mood and take a moment for yourself.',
+        title: 'Daily Check-in',
+        body: 'How are you feeling today? Take a moment to log your mood.',
         sound: true,
       },
       trigger: {
-        hour: 18, // 6 PM
-        minute: 0,
+        date: scheduledTime,
         repeats: true,
       } as any,
     });
+    
+    console.log('Daily reminder scheduled for:', scheduledTime);
   }
 
   async scheduleDailyAffirmation(): Promise<void> {
@@ -129,6 +146,22 @@ class NotificationService {
 
     const randomAffirmation = affirmations[Math.floor(Math.random() * affirmations.length)];
 
+    // Calculate next occurrence of 8 AM (morning affirmation)
+    const now = new Date();
+    const scheduledTime = new Date();
+    scheduledTime.setHours(8, 0, 0, 0); // 8 AM
+    
+    // If it's already past 8 AM today, schedule for tomorrow
+    if (now >= scheduledTime) {
+      scheduledTime.setDate(scheduledTime.getDate() + 1);
+    }
+
+    // Ensure the scheduled time is at least 1 minute in the future
+    const minTime = new Date(now.getTime() + 60000); // 1 minute from now
+    if (scheduledTime < minTime) {
+      scheduledTime.setTime(minTime.getTime());
+    }
+
     await Notifications.scheduleNotificationAsync({
       content: {
         title: 'Daily Affirmation',
@@ -136,14 +169,35 @@ class NotificationService {
         sound: true,
       },
       trigger: {
-        hour: 9, // 9 AM
-        minute: 0,
+        date: scheduledTime,
         repeats: true,
       } as any,
     });
+    
+    console.log('Daily affirmation scheduled for:', scheduledTime);
   }
 
   async scheduleWeeklyReport(): Promise<void> {
+    // Calculate next Sunday at 10 AM
+    const now = new Date();
+    const scheduledTime = new Date();
+    scheduledTime.setHours(10, 0, 0, 0); // 10 AM
+    
+    // Find next Sunday
+    const daysUntilSunday = (7 - now.getDay()) % 7;
+    if (daysUntilSunday === 0 && now.getHours() >= 10) {
+      // If it's Sunday and past 10 AM, schedule for next Sunday
+      scheduledTime.setDate(scheduledTime.getDate() + 7);
+    } else {
+      scheduledTime.setDate(scheduledTime.getDate() + daysUntilSunday);
+    }
+
+    // Ensure the scheduled time is at least 1 minute in the future
+    const minTime = new Date(now.getTime() + 60000); // 1 minute from now
+    if (scheduledTime < minTime) {
+      scheduledTime.setTime(minTime.getTime());
+    }
+
     await Notifications.scheduleNotificationAsync({
       content: {
         title: 'Your Weekly Wellness Report',
@@ -151,12 +205,12 @@ class NotificationService {
         sound: true,
       },
       trigger: {
-        weekday: 0, // Sunday
-        hour: 10,
-        minute: 0,
+        date: scheduledTime,
         repeats: true,
       } as any,
     });
+    
+    console.log('Weekly report scheduled for:', scheduledTime);
   }
 
   async loadSettings(): Promise<void> {
@@ -175,16 +229,36 @@ class NotificationService {
       this.settings = { ...this.settings, ...newSettings };
       await AsyncStorage.setItem(NOTIFICATION_SETTINGS_KEY, JSON.stringify(this.settings));
       
-      // Reschedule notifications if settings changed
-      if (this.settings.enabled) {
-        await this.scheduleDefaultNotifications();
-      } else {
-        await Notifications.cancelAllScheduledNotificationsAsync();
-      }
+      // Don't automatically schedule notifications - let user control this
+      console.log('Notification settings saved:', this.settings);
       
       return true;
     } catch (error) {
       console.error('Error saving notification settings:', error);
+      return false;
+    }
+  }
+
+  async enableNotifications(): Promise<boolean> {
+    try {
+      this.settings.enabled = true;
+      await AsyncStorage.setItem(NOTIFICATION_SETTINGS_KEY, JSON.stringify(this.settings));
+      await this.scheduleNotifications();
+      return true;
+    } catch (error) {
+      console.error('Error enabling notifications:', error);
+      return false;
+    }
+  }
+
+  async disableNotifications(): Promise<boolean> {
+    try {
+      this.settings.enabled = false;
+      await AsyncStorage.setItem(NOTIFICATION_SETTINGS_KEY, JSON.stringify(this.settings));
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      return true;
+    } catch (error) {
+      console.error('Error disabling notifications:', error);
       return false;
     }
   }
@@ -209,6 +283,17 @@ class NotificationService {
       } as any,
     });
   }
+
+  async getScheduledNotifications(): Promise<any[]> {
+    try {
+      const notifications = await Notifications.getAllScheduledNotificationsAsync();
+      return notifications;
+    } catch (error) {
+      console.error('Error getting scheduled notifications:', error);
+      return [];
+    }
+  }
+
 }
 
 // Create singleton instance

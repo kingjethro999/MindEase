@@ -143,7 +143,6 @@ export default function ColorHarmonyGame() {
       if (isCorrect) {
         // Correct match
         tile.isCorrect = true;
-        
 
         // Animate successful match
         Animated.sequence([
@@ -239,9 +238,9 @@ export default function ColorHarmonyGame() {
       
       // Save game completion
       const completionData = {
-        userId,
-        activityType: 'game_session' as const,
-        activityDetails: {
+        user_id: userId,
+        activity_type: 'game_session' as const,
+        activity_details: {
           exerciseId: 'color-harmony',
           exerciseTitle: `Color Harmony - ${pattern.name}`,
           exerciseType: 'color_game',
@@ -250,8 +249,8 @@ export default function ColorHarmonyGame() {
           gameLevel: pattern.id,
           notes: `Completed ${pattern.name} with ${accuracy}% accuracy and ${correctTiles}/${pattern.colors.length} correct matches`
         },
-        completedAt: new Date().toISOString(),
-        streakCount: 1
+        completed_at: new Date().toISOString(),
+        streak_count: 1
       };
 
       await saveExerciseCompletion(completionData);
@@ -293,7 +292,7 @@ export default function ColorHarmonyGame() {
                 visible: true,
                 type: 'achievement',
                 title: 'Achievement Unlocked! 🏆',
-                message: `${achievement.badgeName}: ${achievement.badgeDescription}`,
+                message: `${achievement.badge_name}: ${achievement.badge_description}`,
                 onDismiss: () => setNotification(null)
               });
             }, index * 2000);
@@ -405,6 +404,22 @@ export default function ColorHarmonyGame() {
               <TouchableOpacity style={styles.controlButton} onPress={resetGame}>
                 <RotateCcw size={24} color="white" />
               </TouchableOpacity>
+            </View>
+
+            {/* Target Pattern */}
+            <View style={styles.targetPattern}>
+              <Text style={styles.targetTitle}>Target Pattern:</Text>
+              <View style={styles.targetColors}>
+                {currentPatternData.targetColors.map((color, index) => (
+                  <View
+                    key={`target-${index}`}
+                    style={[
+                      styles.targetColor,
+                      { backgroundColor: color }
+                    ]}
+                  />
+                ))}
+              </View>
             </View>
 
             {/* Color Grid */}
@@ -547,6 +562,35 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     padding: theme.spacing.md,
     borderRadius: theme.borderRadius.lg,
+  },
+  targetPattern: {
+    position: 'absolute',
+    top: theme.spacing.lg,
+    left: theme.spacing.lg,
+    right: theme.spacing.lg,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    zIndex: 5,
+  },
+  targetTitle: {
+    fontSize: theme.typography.fontSize.body,
+    color: 'white',
+    marginBottom: theme.spacing.sm,
+    textAlign: 'center',
+  },
+  targetColors: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
+  },
+  targetColor: {
+    width: 30,
+    height: 30,
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   colorGrid: {
     flex: 1,

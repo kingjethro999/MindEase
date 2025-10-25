@@ -31,6 +31,7 @@ export interface CustomAlertProps {
   showCloseButton?: boolean;
   autoClose?: boolean;
   autoCloseDelay?: number;
+  buttonLayout?: 'row' | 'column';
 }
 
 const CustomAlert: React.FC<CustomAlertProps> = ({
@@ -43,6 +44,7 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
   showCloseButton = true,
   autoClose = false,
   autoCloseDelay = 3000,
+  buttonLayout = 'row',
 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -204,7 +206,10 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
               </Text>
 
               {/* Buttons */}
-              <View style={styles.buttonContainer}>
+              <View style={[
+                styles.buttonContainer,
+                buttonLayout === 'column' && styles.buttonContainerColumn
+              ]}>
                 {buttons.map((button, index) => (
                   <TouchableOpacity
                     key={index}
@@ -213,6 +218,7 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
                       { backgroundColor: button.style === 'destructive' ? theme.colors.error : colors.primary },
                       button.style === 'cancel' && styles.cancelButton,
                       buttons.length === 1 && styles.singleButton,
+                      buttonLayout === 'column' && styles.buttonColumn,
                     ]}
                     onPress={() => handleButtonPress(button)}
                   >
@@ -262,8 +268,8 @@ const styles = StyleSheet.create({
   },
   alertContainer: {
     backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.lg,
-    marginHorizontal: theme.spacing.xl,
+    borderRadius: theme.borderRadius.md,
+    marginHorizontal: theme.spacing.md,
     maxWidth: width * 0.9,
     minWidth: width * 0.7,
     ...theme.shadows.lg,
@@ -302,6 +308,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: theme.spacing.sm,
     width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonContainerColumn: {
+    flexDirection: 'column',
+    gap: theme.spacing.md,
+    alignItems: 'center',
   },
   button: {
     flex: 1,
@@ -312,8 +325,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  buttonColumn: {
+    flex: 0,
+    width: '100%',
+  },
   singleButton: {
     maxWidth: 200,
+    minWidth: 120,
     alignSelf: 'center',
   },
   cancelButton: {

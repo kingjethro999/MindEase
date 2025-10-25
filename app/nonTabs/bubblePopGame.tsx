@@ -17,6 +17,7 @@ import { theme } from '../../theme/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { saveExerciseCompletion } from '../../utils/offlineStorage';
 import { awardExperience, checkAchievements, saveAchievement } from '../../utils/gamification';
+import { gameEventManager } from '../../utils/gameEvents';
 import { NotificationBanner } from '../../components/NotificationBanner';
 
 const { width, height } = Dimensions.get('window');
@@ -64,7 +65,7 @@ export default function BubblePopGame() {
   const createBubble = (): Bubble => {
     const size = Math.random() * 40 + 20; // 20-60px
     const x = Math.random() * (width - size);
-    const y = height + size;
+    const y = height - 50; // Start from bottom of screen
     const color = bubbleColors[Math.floor(Math.random() * bubbleColors.length)];
     
     return {
@@ -99,13 +100,11 @@ export default function BubblePopGame() {
 
     // Start bubble generation
     bubbleTimer.current = setInterval(() => {
-      if (isPlaying && !isPaused) {
-        setBubbles(prev => {
-          const newBubble = createBubble();
-          animateBubble(newBubble);
-          return [...prev, newBubble];
-        });
-      }
+      setBubbles(prev => {
+        const newBubble = createBubble();
+        animateBubble(newBubble);
+        return [...prev, newBubble];
+      });
     }, 800);
   };
 
@@ -126,8 +125,24 @@ export default function BubblePopGame() {
       ])
     ).start();
 
-    // Auto-remove bubble after 8 seconds
+    // Move bubble upward
+    const moveUp = () => {
+      setBubbles(prev => {
+        return prev.map(b => {
+          if (b.id === bubble.id) {
+            return { ...b, y: b.y - 2 };
+          }
+          return b;
+        });
+      });
+    };
+
+    // Move bubble every 50ms
+    const moveInterval = setInterval(moveUp, 50);
+
+    // Auto-remove bubble after 8 seconds or when it goes off screen
     setTimeout(() => {
+      clearInterval(moveInterval);
       setBubbles(prev => prev.filter(b => b.id !== bubble.id));
     }, 8000);
   };
@@ -205,9 +220,9 @@ export default function BubblePopGame() {
       
       // Save game completion
       const completionData = {
-        userId,
-        activityType: 'game_session' as const,
-        activityDetails: {
+        user_id: userId,
+        activity_type: 'game_session' as const,
+        activity_details: {
           exerciseId: 'bubble-pop',
           exerciseTitle: 'Bubble Pop Calm',
           exerciseType: 'stress_relief_game',
@@ -216,15 +231,18 @@ export default function BubblePopGame() {
           gameLevel: 1,
           notes: `Popped ${bubblesPopped} bubbles`
         },
-        completedAt: new Date().toISOString(),
-        streakCount: 1
+        completed_at: new Date().toISOString(),
+        streak_count: 1
       };
 
       await saveExerciseCompletion(completionData);
+      console.log('Bubble Pop game completion saved:', completionData);
 
       // Check for achievements
       const completions = await import('../../utils/offlineStorage').then(m => m.getExerciseCompletions());
+      console.log('Total completions for achievement check:', completions.length);
       const newAchievements = await checkAchievements(userId, completions);
+      console.log('New achievements found:', newAchievements.length);
       
       // Save new achievements
       for (const achievement of newAchievements) {
@@ -249,13 +267,16 @@ export default function BubblePopGame() {
                 visible: true,
                 type: 'achievement',
                 title: 'Achievement Unlocked! 🏆',
-                message: `${achievement.badgeName}: ${achievement.badgeDescription}`,
+                message: `${achievement.badge_name}: ${achievement.badge_description}`,
                 onDismiss: () => setNotification(null)
               });
             }, index * 2000);
           });
         }, 2000);
       }
+
+      // Notify other parts of the app about game completion
+      gameEventManager.notifyGameCompletion('bubble-pop', finalScore, gameDuration);
 
     } catch (error) {
       console.error('Error saving game data:', error);

@@ -2,14 +2,18 @@
   "expo": {
     "name": "Mind Ease",
     "slug": "mind-ease",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/mindeaseicon.png",
     "scheme": "mindease",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "description": "Your personal mental wellness companion. Track mood, practice mindfulness, and play relaxing games to support your mental health journey.",
-    "platforms": ["ios", "android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "githubUrl": "https://github.com/kingjethro999/mind-ease",
     "primaryColor": "#4ECDC4",
     "backgroundColor": "#1a1a2e",
@@ -50,7 +54,8 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.VIBRATE",
-        "android.permission.WAKE_LOCK"
+        "android.permission.WAKE_LOCK",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -89,6 +94,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ab3596bd-e2ea-4f6f-ad1f-e390c504c82f"
+      }
     }
   }
 }

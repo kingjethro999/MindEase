@@ -6,11 +6,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface Achievement {
   id: string;
-  userId: string;
-  badgeType: string; // 'mood_streak_7', 'calm_master', 'resilience_builder', etc.
-  badgeName: string;
-  badgeDescription: string;
-  earnedAt: string;
+  user_id: string;
+  badge_type: string; // 'mood_streak_7', 'calm_master', 'resilience_builder', etc.
+  badge_name: string;
+  badge_description: string;
+  earned_at: string;
   synced: boolean;
 }
 
@@ -34,231 +34,231 @@ export interface UserStats {
 export const ACHIEVEMENT_DEFINITIONS = [
   // Mood Streak Achievements
   {
-    badgeType: 'mood_streak_7',
-    badgeName: 'Weekly Warrior',
-    badgeDescription: 'Log mood for 7 consecutive days',
+    badge_type: 'mood_streak_7',
+    badge_name: 'Weekly Warrior',
+    badge_description: 'Log mood for 7 consecutive days',
     requirements: { type: 'streak', value: 7, activityType: 'mood_log' }
   },
   {
-    badgeType: 'mood_streak_30',
-    badgeName: 'Monthly Master',
-    badgeDescription: 'Log mood for 30 consecutive days',
+    badge_type: 'mood_streak_30',
+    badge_name: 'Monthly Master',
+    badge_description: 'Log mood for 30 consecutive days',
     requirements: { type: 'streak', value: 30, activityType: 'mood_log' }
   },
   
   // Breathing Exercise Achievements
   {
-    badgeType: 'breathing_master',
-    badgeName: 'Focused Breather',
-    badgeDescription: 'Complete 10 breathing exercises',
+    badge_type: 'breathing_master',
+    badge_name: 'Focused Breather',
+    badge_description: 'Complete 10 breathing exercises',
     requirements: { type: 'count', value: 10, activityType: 'breathing_exercise' }
   },
   {
-    badgeType: 'sleep_ready',
-    badgeName: 'Sleep Ready',
-    badgeDescription: 'Complete 4-7-8 breathing before bedtime',
+    badge_type: 'sleep_ready',
+    badge_name: 'Sleep Ready',
+    badge_description: 'Complete 4-7-8 breathing before bedtime',
     requirements: { type: 'special', value: 1, activityType: 'breathing_exercise' }
   },
   
   // Meditation Achievements
   {
-    badgeType: 'meditation_explorer',
-    badgeName: 'Calm Explorer',
-    badgeDescription: 'Complete 5 meditation sessions',
+    badge_type: 'meditation_explorer',
+    badge_name: 'Calm Explorer',
+    badge_description: 'Complete 5 meditation sessions',
     requirements: { type: 'count', value: 5, activityType: 'meditation' }
   },
   {
-    badgeType: 'sleep_helper',
-    badgeName: 'Sleep Helper',
-    badgeDescription: 'Complete 3 body scan sessions',
+    badge_type: 'sleep_helper',
+    badge_name: 'Sleep Helper',
+    badge_description: 'Complete 3 body scan sessions',
     requirements: { type: 'count', value: 3, activityType: 'meditation' }
   },
   {
-    badgeType: 'grounding_hero',
-    badgeName: 'Grounded Hero',
-    badgeDescription: 'Complete 3 grounding exercises',
+    badge_type: 'grounding_hero',
+    badge_name: 'Grounded Hero',
+    badge_description: 'Complete 3 grounding exercises',
     requirements: { type: 'count', value: 3, activityType: 'meditation' }
   },
   
   // Journaling Achievements
   {
-    badgeType: 'gratitude_keeper',
-    badgeName: 'Gratitude Keeper',
-    badgeDescription: 'Journal gratitude for 7 days',
+    badge_type: 'gratitude_keeper',
+    badge_name: 'Gratitude Keeper',
+    badge_description: 'Journal gratitude for 7 days',
     requirements: { type: 'count', value: 7, activityType: 'journaling' }
   },
   {
-    badgeType: 'resilience_builder',
-    badgeName: 'Resilience Builder',
-    badgeDescription: 'Complete 5 thought reframing exercises',
+    badge_type: 'resilience_builder',
+    badge_name: 'Resilience Builder',
+    badge_description: 'Complete 5 thought reframing exercises',
     requirements: { type: 'count', value: 5, activityType: 'journaling' }
   },
   
   // Game Achievements
   {
-    badgeType: 'stress_buster',
-    badgeName: 'Stress Buster',
-    badgeDescription: 'Complete 10 stress-relief game sessions',
+    badge_type: 'stress_buster',
+    badge_name: 'Stress Buster',
+    badge_description: 'Complete 10 stress-relief game sessions',
     requirements: { type: 'count', value: 10, activityType: 'game_session' }
   },
   {
-    badgeType: 'bubble_master',
-    badgeName: 'Bubble Master',
-    badgeDescription: 'Pop 100 bubbles in Bubble Pop Calm',
+    badge_type: 'bubble_master',
+    badge_name: 'Bubble Master',
+    badge_description: 'Pop 100 bubbles in Bubble Pop Calm',
     requirements: { type: 'special', value: 100, activityType: 'game_session' }
   },
   {
-    badgeType: 'breathing_sync_pro',
-    badgeName: 'Breathing Sync Pro',
-    badgeDescription: 'Complete 5 perfect breathing cycles',
+    badge_type: 'breathing_sync_pro',
+    badge_name: 'Breathing Sync Pro',
+    badge_description: 'Complete 5 perfect breathing cycles',
     requirements: { type: 'special', value: 5, activityType: 'game_session' }
   },
   {
-    badgeType: 'puzzle_solver',
-    badgeName: 'Puzzle Solver',
-    badgeDescription: 'Complete all 3 puzzle levels',
+    badge_type: 'puzzle_solver',
+    badge_name: 'Puzzle Solver',
+    badge_description: 'Complete all 3 puzzle levels',
     requirements: { type: 'special', value: 3, activityType: 'game_session' }
   },
   {
-    badgeType: 'color_artist',
-    badgeName: 'Color Artist',
-    badgeDescription: 'Achieve 100% accuracy in Color Harmony',
+    badge_type: 'color_artist',
+    badge_name: 'Color Artist',
+    badge_description: 'Achieve 100% accuracy in Color Harmony',
     requirements: { type: 'special', value: 100, activityType: 'game_session' }
   },
   {
-    badgeType: 'game_marathon',
-    badgeName: 'Game Marathon',
-    badgeDescription: 'Play games for 30 minutes in one session',
+    badge_type: 'game_marathon',
+    badge_name: 'Game Marathon',
+    badge_description: 'Play games for 30 minutes in one session',
     requirements: { type: 'special', value: 30, activityType: 'game_session' }
   },
   {
-    badgeType: 'tic_tac_toe_master',
-    badgeName: 'Tic-Tac-Toe Master',
-    badgeDescription: 'Win 10 games of Tic-Tac-Toe',
+    badge_type: 'tic_tac_toe_master',
+    badge_name: 'Tic-Tac-Toe Master',
+    badge_description: 'Win 10 games of Tic-Tac-Toe',
     requirements: { type: 'special', value: 10, activityType: 'game_session' }
   },
   {
-    badgeType: 'robot_beater',
-    badgeName: 'Robot Beater',
-    badgeDescription: 'Beat the AI opponent 5 times',
+    badge_type: 'robot_beater',
+    badge_name: 'Robot Beater',
+    badge_description: 'Beat the AI opponent 5 times',
     requirements: { type: 'special', value: 5, activityType: 'game_session' }
   },
   {
-    badgeType: 'strategy_thinker',
-    badgeName: 'Strategy Thinker',
-    badgeDescription: 'Complete 20 Tic-Tac-Toe games',
+    badge_type: 'strategy_thinker',
+    badge_name: 'Strategy Thinker',
+    badge_description: 'Complete 20 Tic-Tac-Toe games',
     requirements: { type: 'special', value: 20, activityType: 'game_session' }
   },
   
   // Cross-Activity Achievements
   {
-    badgeType: 'wellness_warrior',
-    badgeName: 'Wellness Warrior',
-    badgeDescription: 'Complete exercises in 3 different categories',
+    badge_type: 'wellness_warrior',
+    badge_name: 'Wellness Warrior',
+    badge_description: 'Complete exercises in 3 different categories',
     requirements: { type: 'special', value: 3, activityType: 'mixed' }
   },
   {
-    badgeType: 'consistency_champion',
-    badgeName: 'Consistency Champion',
-    badgeDescription: 'Maintain a 7-day streak across activities',
+    badge_type: 'consistency_champion',
+    badge_name: 'Consistency Champion',
+    badge_description: 'Maintain a 7-day streak across activities',
     requirements: { type: 'streak', value: 7, activityType: 'mixed' }
   },
 
   // Advanced Gamification Achievements
   {
-    badgeType: 'early_bird',
-    badgeName: 'Early Bird',
-    badgeDescription: 'Log mood before 8 AM for 7 days',
+    badge_type: 'early_bird',
+    badge_name: 'Early Bird',
+    badge_description: 'Log mood before 8 AM for 7 days',
     requirements: { type: 'time_pattern', value: 7, timeRange: 'morning' }
   },
   {
-    badgeType: 'night_owl',
-    badgeName: 'Night Owl',
-    badgeDescription: 'Complete exercises after 10 PM for 5 days',
+    badge_type: 'night_owl',
+    badge_name: 'Night Owl',
+    badge_description: 'Complete exercises after 10 PM for 5 days',
     requirements: { type: 'time_pattern', value: 5, timeRange: 'evening' }
   },
   {
-    badgeType: 'weekend_warrior',
-    badgeName: 'Weekend Warrior',
-    badgeDescription: 'Maintain mood logging streak through weekends',
+    badge_type: 'weekend_warrior',
+    badge_name: 'Weekend Warrior',
+    badge_description: 'Maintain mood logging streak through weekends',
     requirements: { type: 'weekend_streak', value: 4, activityType: 'mood_log' }
   },
   {
-    badgeType: 'mindfulness_maestro',
-    badgeName: 'Mindfulness Maestro',
-    badgeDescription: 'Complete 50 total mindfulness activities',
+    badge_type: 'mindfulness_maestro',
+    badge_name: 'Mindfulness Maestro',
+    badge_description: 'Complete 50 total mindfulness activities',
     requirements: { type: 'total_count', value: 50, activityTypes: ['breathing_exercise', 'meditation'] }
   },
   {
-    badgeType: 'reflection_master',
-    badgeName: 'Reflection Master',
-    badgeDescription: 'Write 20 journal entries',
+    badge_type: 'reflection_master',
+    badge_name: 'Reflection Master',
+    badge_description: 'Write 20 journal entries',
     requirements: { type: 'count', value: 20, activityType: 'journaling' }
   },
   {
-    badgeType: 'gratitude_guru',
-    badgeName: 'Gratitude Guru',
-    badgeDescription: 'Complete 10 gratitude journal entries',
+    badge_type: 'gratitude_guru',
+    badge_name: 'Gratitude Guru',
+    badge_description: 'Complete 10 gratitude journal entries',
     requirements: { type: 'journal_type', value: 10, journalType: 'gratitude' }
   },
   {
-    badgeType: 'thought_reframer',
-    badgeName: 'Thought Reframer',
-    badgeDescription: 'Complete 5 thought reframing exercises',
+    badge_type: 'thought_reframer',
+    badge_name: 'Thought Reframer',
+    badge_description: 'Complete 5 thought reframing exercises',
     requirements: { type: 'journal_type', value: 5, journalType: 'reframing' }
   },
   {
-    badgeType: 'streak_survivor',
-    badgeName: 'Streak Survivor',
-    badgeDescription: 'Maintain any 14-day streak',
+    badge_type: 'streak_survivor',
+    badge_name: 'Streak Survivor',
+    badge_description: 'Maintain any 14-day streak',
     requirements: { type: 'any_streak', value: 14, activityType: 'any' }
   },
   {
-    badgeType: 'xp_collector',
-    badgeName: 'XP Collector',
-    badgeDescription: 'Earn 1000 total experience points',
+    badge_type: 'xp_collector',
+    badge_name: 'XP Collector',
+    badge_description: 'Earn 1000 total experience points',
     requirements: { type: 'total_xp', value: 1000, activityType: 'any' }
   },
   {
-    badgeType: 'zen_master',
-    badgeName: 'Zen Master',
-    badgeDescription: 'Complete 100 total activities',
+    badge_type: 'zen_master',
+    badge_name: 'Zen Master',
+    badge_description: 'Complete 100 total activities',
     requirements: { type: 'total_activities', value: 100, activityType: 'any' }
   },
   {
-    badgeType: 'mood_analyst',
-    badgeName: 'Mood Analyst',
-    badgeDescription: 'Log mood for 60 days total',
+    badge_type: 'mood_analyst',
+    badge_name: 'Mood Analyst',
+    badge_description: 'Log mood for 60 days total',
     requirements: { type: 'total_count', value: 60, activityType: 'mood_log' }
   },
   {
-    badgeType: 'game_legend',
-    badgeName: 'Game Legend',
-    badgeDescription: 'Achieve high scores in all games',
+    badge_type: 'game_legend',
+    badge_name: 'Game Legend',
+    badge_description: 'Achieve high scores in all games',
     requirements: { type: 'game_mastery_all', value: 1, gameType: 'all' }
   },
   {
-    badgeType: 'balanced_life',
-    badgeName: 'Balanced Life',
-    badgeDescription: 'Use all app features in one week',
+    badge_type: 'balanced_life',
+    badge_name: 'Balanced Life',
+    badge_description: 'Use all app features in one week',
     requirements: { type: 'weekly_complete', value: 1, activityType: 'all' }
   },
   {
-    badgeType: 'progress_tracker',
-    badgeName: 'Progress Tracker',
-    badgeDescription: 'View weekly reports for 4 consecutive weeks',
+    badge_type: 'progress_tracker',
+    badge_name: 'Progress Tracker',
+    badge_description: 'View weekly reports for 4 consecutive weeks',
     requirements: { type: 'report_viewing', value: 4, activityType: 'weekly_report' }
   },
   {
-    badgeType: 'dedication_demon',
-    badgeName: 'Dedication Demon',
-    badgeDescription: 'Use the app for 30 consecutive days',
+    badge_type: 'dedication_demon',
+    badge_name: 'Dedication Demon',
+    badge_description: 'Use the app for 30 consecutive days',
     requirements: { type: 'app_usage', value: 30, activityType: 'any' }
   },
   {
-    badgeType: 'explorer',
-    badgeName: 'Explorer',
-    badgeDescription: 'Try every type of exercise at least once',
+    badge_type: 'explorer',
+    badge_name: 'Explorer',
+    badge_description: 'Try every type of exercise at least once',
     requirements: { type: 'variety', value: 5, activityTypes: ['breathing_exercise', 'meditation', 'journaling', 'game_session', 'mood_log'] }
   }
 ];
@@ -285,24 +285,32 @@ export const checkAchievements = async (userId: string, completions: any[]): Pro
   
   // Get existing achievements to avoid duplicates
   const existingAchievements = await getAchievements();
-  const existingBadgeTypes = existingAchievements.map((a: Achievement) => a.badgeType);
+  const existingBadgeTypes = existingAchievements.map((a: Achievement) => a.badge_type);
+  
+  console.log('Checking achievements:', {
+    userId,
+    totalCompletions: completions.length,
+    existingAchievements: existingAchievements.length,
+    existingBadgeTypes
+  });
   
   for (const achievementDef of ACHIEVEMENT_DEFINITIONS) {
     // Check if already earned
-    if (existingBadgeTypes.includes(achievementDef.badgeType)) continue;
+    const badge_type = achievementDef.badge_type || '';
+    if (existingBadgeTypes.includes(badge_type)) continue;
 
     let earned = false;
 
     switch (achievementDef.requirements.type) {
       case 'count':
-        const activityCompletions = completions.filter(c => c.activityType === achievementDef.requirements.activityType);
+        const activityCompletions = completions.filter(c => c.activity_type === achievementDef.requirements.activityType);
         earned = activityCompletions.length >= achievementDef.requirements.value;
         break;
 
       case 'streak':
         if (achievementDef.requirements.activityType === 'mood_log') {
           // Calculate mood streak from completions
-          const moodCompletions = completions.filter(c => c.activityType === 'mood_log');
+          const moodCompletions = completions.filter(c => c.activity_type === 'mood_log');
           earned = calculateStreak(moodCompletions) >= achievementDef.requirements.value;
         } else if (achievementDef.requirements.activityType === 'mixed') {
           // Calculate cross-activity streak
@@ -311,92 +319,92 @@ export const checkAchievements = async (userId: string, completions: any[]): Pro
         break;
 
       case 'special':
-        if (achievementDef.badgeType === 'sleep_ready') {
+        if (achievementDef.badge_type === 'sleep_ready') {
           // Check for 4-7-8 breathing at night
           const nightBreathing = completions.filter(c => 
-            c.activityType === 'breathing_exercise' && 
-            c.activityDetails?.exerciseId === '4-7-8' &&
-            isNightTime(c.completedAt)
+            c.activity_type === 'breathing_exercise' && 
+            c.activity_details?.exerciseId === '4-7-8' &&
+            isNightTime(c.completed_at)
           );
           earned = nightBreathing.length >= achievementDef.requirements.value;
-        } else if (achievementDef.badgeType === 'wellness_warrior') {
+        } else if (achievementDef.badge_type === 'wellness_warrior') {
           // Check for exercises in 3 different categories
-          const uniqueActivityTypes = new Set(completions.map(c => c.activityType));
+          const uniqueActivityTypes = new Set(completions.map(c => c.activity_type));
           earned = uniqueActivityTypes.size >= achievementDef.requirements.value;
-        } else if (achievementDef.badgeType === 'bubble_master') {
+        } else if (achievementDef.badge_type === 'bubble_master') {
           // Check for bubble pop achievements
           const bubbleGames = completions.filter(c => 
-            c.activityType === 'game_session' && 
-            c.activityDetails?.exerciseId === 'bubble-pop'
+            c.activity_type === 'game_session' && 
+            c.activity_details?.exerciseId === 'bubble-pop'
           );
           const totalBubbles = bubbleGames.reduce((sum, game) => 
-            sum + (game.activityDetails?.gameScore || 0) / 10, 0
+            sum + (game.activity_details?.gameScore || 0) / 10, 0
           );
           earned = totalBubbles >= achievementDef.requirements.value;
-        } else if (achievementDef.badgeType === 'breathing_sync_pro') {
+        } else if (achievementDef.badge_type === 'breathing_sync_pro') {
           // Check for perfect breathing cycles
           const breathingGames = completions.filter(c => 
-            c.activityType === 'game_session' && 
-            c.activityDetails?.exerciseId === 'breathing-sync'
+            c.activity_type === 'game_session' && 
+            c.activity_details?.exerciseId === 'breathing-sync'
           );
           const perfectCycles = breathingGames.filter(game => 
-            game.activityDetails?.notes?.includes('perfect') || 
-            (game.activityDetails?.gameScore || 0) >= 500
+            game.activity_details?.notes?.includes('perfect') || 
+            (game.activity_details?.gameScore || 0) >= 500
           ).length;
           earned = perfectCycles >= achievementDef.requirements.value;
-        } else if (achievementDef.badgeType === 'puzzle_solver') {
+        } else if (achievementDef.badge_type === 'puzzle_solver') {
           // Check for completed puzzle levels
           const puzzleGames = completions.filter(c => 
-            c.activityType === 'game_session' && 
-            c.activityDetails?.exerciseId === 'soothing-puzzle'
+            c.activity_type === 'game_session' && 
+            c.activity_details?.exerciseId === 'soothing-puzzle'
           );
-          const completedLevels = new Set(puzzleGames.map(game => game.activityDetails?.gameLevel)).size;
+          const completedLevels = new Set(puzzleGames.map(game => game.activity_details?.gameLevel)).size;
           earned = completedLevels >= achievementDef.requirements.value;
-        } else if (achievementDef.badgeType === 'color_artist') {
+        } else if (achievementDef.badge_type === 'color_artist') {
           // Check for 100% accuracy in color harmony
           const colorGames = completions.filter(c => 
-            c.activityType === 'game_session' && 
-            c.activityDetails?.exerciseId === 'color-harmony'
+            c.activity_type === 'game_session' && 
+            c.activity_details?.exerciseId === 'color-harmony'
           );
           const perfectGames = colorGames.filter(game => 
-            game.activityDetails?.notes?.includes('100%') ||
-            (game.activityDetails?.gameScore || 0) >= 1000
+            game.activity_details?.notes?.includes('100%') ||
+            (game.activity_details?.gameScore || 0) >= 1000
           ).length;
           earned = perfectGames >= 1; // At least one perfect game
-        } else if (achievementDef.badgeType === 'game_marathon') {
+        } else if (achievementDef.badge_type === 'game_marathon') {
           // Check for 30+ minute game sessions
           const longGames = completions.filter(c => 
-            c.activityType === 'game_session' && 
-            (c.activityDetails?.duration || 0) >= 30
+            c.activity_type === 'game_session' && 
+            (c.activity_details?.duration || 0) >= 30
           );
           earned = longGames.length >= 1;
-        } else if (achievementDef.badgeType === 'tic_tac_toe_master') {
+        } else if (achievementDef.badge_type === 'tic_tac_toe_master') {
           // Check for Tic-Tac-Toe wins
           const ticTacToeGames = completions.filter(c => 
-            c.activityType === 'game_session' && 
-            c.activityDetails?.exerciseId === 'tic-tac-toe'
+            c.activity_type === 'game_session' && 
+            c.activity_details?.exerciseId === 'tic-tac-toe'
           );
           const wins = ticTacToeGames.filter(game => 
-            game.activityDetails?.notes?.includes('Winner: X') ||
-            game.activityDetails?.notes?.includes('You won!')
+            game.activity_details?.notes?.includes('Winner: X') ||
+            game.activity_details?.notes?.includes('You won!')
           ).length;
           earned = wins >= achievementDef.requirements.value;
-        } else if (achievementDef.badgeType === 'robot_beater') {
+        } else if (achievementDef.badge_type === 'robot_beater') {
           // Check for wins against robot
           const robotGames = completions.filter(c => 
-            c.activityType === 'game_session' && 
-            c.activityDetails?.exerciseId === 'tic-tac-toe' &&
-            c.activityDetails?.notes?.includes('vs-robot')
+            c.activity_type === 'game_session' && 
+            c.activity_details?.exerciseId === 'tic-tac-toe' &&
+            c.activity_details?.notes?.includes('vs-robot')
           );
           const robotWins = robotGames.filter(game => 
-            game.activityDetails?.notes?.includes('You won!')
+            game.activity_details?.notes?.includes('You won!')
           ).length;
           earned = robotWins >= achievementDef.requirements.value;
-        } else if (achievementDef.badgeType === 'strategy_thinker') {
+        } else if (achievementDef.badge_type === 'strategy_thinker') {
           // Check for total Tic-Tac-Toe games played
           const ticTacToeGames = completions.filter(c => 
-            c.activityType === 'game_session' && 
-            c.activityDetails?.exerciseId === 'tic-tac-toe'
+            c.activity_type === 'game_session' && 
+            c.activity_details?.exerciseId === 'tic-tac-toe'
           );
           earned = ticTacToeGames.length >= achievementDef.requirements.value;
         }
@@ -404,13 +412,14 @@ export const checkAchievements = async (userId: string, completions: any[]): Pro
     }
 
     if (earned) {
+      console.log('Achievement earned:', badge_type, achievementDef.badge_name);
       const newAchievement: Achievement = {
         id: `achievement_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        userId,
-        badgeType: achievementDef.badgeType,
-        badgeName: achievementDef.badgeName,
-        badgeDescription: achievementDef.badgeDescription,
-        earnedAt: new Date().toISOString(),
+        user_id: userId,
+        badge_type: badge_type,
+        badge_name: achievementDef.badge_name || 'Unnamed Badge',
+        badge_description: achievementDef.badge_description || 'No description available',
+        earned_at: new Date().toISOString(),
         synced: false
       };
       newAchievements.push(newAchievement);
@@ -450,11 +459,11 @@ const calculateCrossActivityStreak = (completions: any[]): number => {
   const dailyActivities = new Map();
   
   completions.forEach(completion => {
-    const date = new Date(completion.completedAt).toDateString();
+    const date = new Date(completion.completed_at).toDateString();
     if (!dailyActivities.has(date)) {
       dailyActivities.set(date, new Set());
     }
-    dailyActivities.get(date).add(completion.activityType);
+    dailyActivities.get(date).add(completion.activity_type);
   });
   
   // Calculate consecutive days with any activity
@@ -528,7 +537,7 @@ export const getAchievementNotification = (achievement: Achievement) => {
   return {
     type: 'achievement' as const,
     title: `Achievement Unlocked! 🏆`,
-    message: `${achievement.badgeName}: ${achievement.badgeDescription}`
+    message: `${achievement.badge_name}: ${achievement.badge_description}`
   };
 };
 
@@ -634,4 +643,127 @@ export const saveAchievement = async (achievement: Achievement): Promise<void> =
     console.error('Error saving achievement:', error);
     throw error;
   }
+};
+
+// ============================================================================
+// STATS CALCULATION FUNCTIONS
+// ============================================================================
+
+export const calculateUserStatsFromCompletions = async (): Promise<UserStats> => {
+  try {
+    // Import here to avoid circular dependency
+    const { getExerciseCompletions } = await import('./offlineStorage');
+    const completions = await getExerciseCompletions();
+    
+    // Calculate stats from completions
+    const totalExercises = completions.length;
+    const breathingExercises = completions.filter(c => c.activity_type === 'breathing_exercise').length;
+    const meditationExercises = completions.filter(c => c.activity_type === 'meditation').length;
+    const journalingEntries = completions.filter(c => c.activity_type === 'journaling').length;
+    const moodEntries = completions.filter(c => c.activity_type === 'mood_log').length;
+    
+    // Calculate total exercise time
+    const totalExerciseTime = completions.reduce((sum, c) => sum + (c.activity_details?.duration || 0), 0);
+    
+    // Calculate total experience
+    const totalExperience = completions.reduce((sum, c) => {
+      const activityType = c.activity_type;
+      const duration = c.activity_details?.duration;
+      const exp = awardExperience(activityType, duration);
+      return sum + exp;
+    }, 0);
+    
+    // Calculate level from experience
+    const levelData = calculateLevel(totalExperience);
+    
+    // Calculate current streak (simplified - consecutive days with any activity)
+    const currentStreak = calculateCurrentStreak(completions);
+    
+    // Get last exercise date
+    const lastExerciseDate = completions.length > 0 
+      ? completions.sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0].completed_at
+      : null;
+    
+    // Get achievements
+    const achievements = await getAchievements();
+    
+    return {
+      totalExercises,
+      breathingExercises,
+      meditationExercises,
+      journalingEntries,
+      currentStreak,
+      longestStreak: currentStreak, // Simplified for now
+      totalExerciseTime,
+      moodEntries,
+      lastExerciseDate,
+      achievements,
+      level: levelData.level,
+      experience: totalExperience,
+      nextLevelExp: levelData.nextLevelExp
+    };
+  } catch (error) {
+    console.error('Error calculating user stats from completions:', error);
+    return {
+      totalExercises: 0,
+      breathingExercises: 0,
+      meditationExercises: 0,
+      journalingEntries: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      totalExerciseTime: 0,
+      moodEntries: 0,
+      lastExerciseDate: null,
+      achievements: [],
+      level: 1,
+      experience: 0,
+      nextLevelExp: 100
+    };
+  }
+};
+
+export const updateUserStatsFromCompletions = async (): Promise<UserStats> => {
+  try {
+    const calculatedStats = await calculateUserStatsFromCompletions();
+    await saveUserStats(calculatedStats);
+    return calculatedStats;
+  } catch (error) {
+    console.error('Error updating user stats from completions:', error);
+    throw error;
+  }
+};
+
+const calculateCurrentStreak = (completions: any[]): number => {
+  if (completions.length === 0) return 0;
+  
+  // Group completions by date
+  const dailyActivities = new Map();
+  
+  completions.forEach(completion => {
+    const date = new Date(completion.completed_at).toDateString();
+    if (!dailyActivities.has(date)) {
+      dailyActivities.set(date, new Set());
+    }
+    dailyActivities.get(date).add(completion.activity_type);
+  });
+  
+  // Calculate consecutive days with any activity
+  const sortedDates = Array.from(dailyActivities.keys()).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  
+  let streak = 0;
+  let currentDate = new Date();
+  
+  for (const dateStr of sortedDates) {
+    const date = new Date(dateStr);
+    const daysDiff = Math.floor((currentDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff === streak) {
+      streak++;
+      currentDate = date;
+    } else {
+      break;
+    }
+  }
+  
+  return streak;
 };
