@@ -1,8 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowRight, Lightbulb, LogOut, Target, TrendingUp, Settings, Trophy, Heart, Moon, Brain, Activity, Users, BookOpen } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, RefreshControl, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAlert } from '../../contexts/AlertContext';
@@ -156,6 +156,7 @@ export default function HomeScreen() {
   const [currentMotivation, setCurrentMotivation] = useState<Motivation>(getRandomMotivation());
   const [currentTip, setCurrentTip] = useState<string>(getRandomTip());
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const fetchingRef = React.useRef(false);
 
   const handleLogout = () => {
     showConfirm(
@@ -169,7 +170,14 @@ export default function HomeScreen() {
 
   // Fetch user dashboard data from database and save to offline storage
   const fetchUserDashboard = async () => {
+    // Prevent multiple simultaneous fetches
+    if (fetchingRef.current) {
+      console.log('Already fetching, skipping...');
+      return;
+    }
+
     try {
+      fetchingRef.current = true;
       setLoading(true);
       if (!user?.id) {
         console.log('No user ID available');
@@ -189,19 +197,20 @@ export default function HomeScreen() {
           const offlineProfile: UserProfile = {
             id: dbProfile.id,
             email: dbProfile.email,
-            displayName: dbProfile.display_name,
-            ageRange: dbProfile.age_range,
-            primaryGoals: dbProfile.primary_goals,
+            display_name: dbProfile.display_name,
+            age_range: dbProfile.age_range,
+            primary_goals: dbProfile.primary_goals,
             timezone: dbProfile.timezone,
-            languagePreference: dbProfile.language_preference,
-            notificationPreferences: typeof dbProfile.notification_preferences === 'string' 
+            language_preference: dbProfile.language_preference,
+            notification_preferences: typeof dbProfile.notification_preferences === 'string' 
               ? JSON.parse(dbProfile.notification_preferences) 
               : dbProfile.notification_preferences,
-            onboardingCompleted: dbProfile.onboarding_completed,
-            premiumStatus: dbProfile.premium_status,
-            premiumExpiresAt: dbProfile.premium_expires_at,
-            createdAt: dbProfile.created_at,
-            updatedAt: dbProfile.updated_at
+            onboarding_completed: dbProfile.onboarding_completed,
+            premium_status: dbProfile.premium_status,
+            premium_expires_at: dbProfile.premium_expires_at,
+            created_at: dbProfile.created_at,
+            updated_at: dbProfile.updated_at,
+            synced: false
           };
 
           await saveUserProfile(offlineProfile);
@@ -222,9 +231,9 @@ export default function HomeScreen() {
       if (profile) {
         const dashboardData: UserDashboardData = {
           id: profile.id,
-          display_name: profile.displayName || 'User',
-          primary_goals: profile.primaryGoals || [],
-          premium_status: profile.premiumStatus,
+          display_name: profile.display_name || 'User',
+          primary_goals: profile.primary_goals || [],
+          premium_status: profile.premium_status,
           mood_entries_count: moodEntries.length,
           badges_earned: achievements.length,
           last_mood_entry: moodEntries.length > 0 ? moodEntries[moodEntries.length - 1].date : null,
@@ -233,12 +242,14 @@ export default function HomeScreen() {
         };
         
         setUserData(dashboardData);
+        setHasInitiallyLoaded(true);
         console.log('Dashboard data set:', dashboardData);
       }
     } catch (error) {
       console.error('Error in fetchUserDashboard:', error);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   };
 
@@ -247,6 +258,18 @@ export default function HomeScreen() {
       fetchUserDashboard();
     }
   }, [user?.id]);
+
+  // Refresh dashboard data when screen comes into focus (but not on initial load)
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
+  
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id && hasInitiallyLoaded && !fetchingRef.current) {
+          console.log('Screen focused - refreshing dashboard data');
+          fetchUserDashboard();
+      }
+    }, [user?.id, hasInitiallyLoaded])
+  );
 
   // Timer to change motivation and tip every 1 minute (60,000 ms)
   useEffect(() => {

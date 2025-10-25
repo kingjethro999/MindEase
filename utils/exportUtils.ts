@@ -1,7 +1,7 @@
 import { getMoodEntries, getExerciseCompletions, getJournalEntries, getUserProfile, getUserProgress, getAchievements } from './offlineStorage';
 import { MoodEntry, ExerciseCompletion, JournalEntry, UserProfile, UserProgress } from './offlineStorage';
 import { Achievement } from './gamification';
-import { Paths, writeAsStringAsync } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
 export interface ExportData {
@@ -35,7 +35,7 @@ export const generateExportData = async (): Promise<ExportData> => {
     return {
       userProfile,
       moodEntries: moodEntries.filter(entry => new Date(entry.date) >= thirtyDaysAgo),
-      exerciseCompletions: exerciseCompletions.filter(completion => new Date(completion.completedAt) >= thirtyDaysAgo),
+      exerciseCompletions: exerciseCompletions.filter(completion => new Date(completion.completed_at) >= thirtyDaysAgo),
       journalEntries: journalEntries.filter(entry => new Date(entry.createdAt) >= thirtyDaysAgo),
       userProgress,
       achievements,
@@ -63,7 +63,7 @@ export const generateTextReport = (data: ExportData): string => {
   
   // User Info
   if (userProfile) {
-    report += `User: ${userProfile.displayName || 'Anonymous'}\n`;
+    report += `User: ${userProfile.display_name || 'Anonymous'}\n`;
     report += `Email: ${userProfile.email}\n`;
     report += `Report Period: ${new Date(dateRange.start).toLocaleDateString()} - ${new Date(dateRange.end).toLocaleDateString()}\n`;
     report += `Generated: ${new Date(data.exportDate).toLocaleString()}\n\n`;
@@ -76,7 +76,7 @@ export const generateTextReport = (data: ExportData): string => {
   
   if (moodEntries.length > 0) {
     const moodCounts = moodEntries.reduce((acc, entry) => {
-      acc[entry.primaryMood] = (acc[entry.primaryMood] || 0) + 1;
+      acc[entry.primary_mood] = (acc[entry.primary_mood] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
     
@@ -86,7 +86,7 @@ export const generateTextReport = (data: ExportData): string => {
       report += `  ${mood}: ${count} (${percentage}%)\n`;
     });
     
-    const avgIntensity = moodEntries.reduce((sum, entry) => sum + entry.moodIntensity, 0) / moodEntries.length;
+    const avgIntensity = moodEntries.reduce((sum, entry) => sum + entry.mood_intensity, 0) / moodEntries.length;
     report += `\nAverage Mood Intensity: ${avgIntensity.toFixed(1)}/5\n`;
   }
   
@@ -97,7 +97,7 @@ export const generateTextReport = (data: ExportData): string => {
   
   if (exerciseCompletions.length > 0) {
     const activityCounts = exerciseCompletions.reduce((acc, completion) => {
-      acc[completion.activityType] = (acc[completion.activityType] || 0) + 1;
+      acc[completion.activity_type] = (acc[completion.activity_type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
     
@@ -107,7 +107,7 @@ export const generateTextReport = (data: ExportData): string => {
     });
     
     const totalDuration = exerciseCompletions.reduce((sum, completion) => 
-      sum + (completion.activityDetails.duration || 0), 0);
+      sum + (completion.activity_details.duration || 0), 0);
     report += `\nTotal Activity Time: ${Math.round(totalDuration / 60)} minutes\n`;
   }
   
@@ -127,9 +127,9 @@ export const generateTextReport = (data: ExportData): string => {
   if (userProgress) {
     // Calculate total experience points from exercise completions
     const totalExperiencePoints = exerciseCompletions.reduce((sum, completion) => {
-      const duration = completion.activityDetails.duration || 0;
+      const duration = completion.activity_details.duration || 0;
       let xp = 0;
-      switch (completion.activityType) {
+      switch (completion.activity_type) {
         case 'breathing_exercise':
           xp = Math.max(10, Math.floor(duration / 60) * 5);
           break;
@@ -168,9 +168,9 @@ export const generateTextReport = (data: ExportData): string => {
   
   if (achievements.length > 0) {
     achievements.forEach((achievement, index) => {
-      report += `${index + 1}. ${achievement.badgeName}\n`;
-      report += `   ${achievement.badgeDescription}\n`;
-      report += `   Earned: ${new Date(achievement.earnedAt).toLocaleDateString()}\n\n`;
+      report += `${index + 1}. ${achievement.badge_name}\n`;
+      report += `   ${achievement.badge_description}\n`;
+      report += `   Earned: ${new Date(achievement.earned_at).toLocaleDateString()}\n\n`;
     });
   }
   
@@ -184,7 +184,7 @@ export const generateTextReport = (data: ExportData): string => {
       .slice(0, 10);
     
     recentEntries.forEach(entry => {
-      report += `${new Date(entry.date).toLocaleDateString()}: ${entry.primaryMood} (${entry.moodIntensity}/5)\n`;
+      report += `${new Date(entry.date).toLocaleDateString()}: ${entry.primary_mood} (${entry.mood_intensity}/5)\n`;
       if (entry.notes) {
         report += `  Notes: ${entry.notes}\n`;
       }
@@ -228,14 +228,14 @@ export const generateCSVData = (data: ExportData): string => {
   csv += 'Date,Primary Mood,Intensity,Notes,Triggers,Energy Level,Sleep Quality,Sleep Hours\n';
   
   moodEntries.forEach(entry => {
-    csv += `"${entry.date}","${entry.primaryMood}","${entry.moodIntensity}","${entry.notes || ''}","${entry.triggers?.join(';') || ''}","${entry.energyLevel || ''}","${entry.sleepQuality || ''}","${entry.sleepHours || ''}"\n`;
+    csv += `"${entry.date}","${entry.primary_mood}","${entry.mood_intensity}","${entry.notes || ''}","${entry.triggers?.join(';') || ''}","${entry.energy_level || ''}","${entry.sleep_quality || ''}","${entry.sleep_hours || ''}"\n`;
   });
   
   csv += '\n\nEXERCISE COMPLETIONS\n';
   csv += 'Date,Activity Type,Exercise Title,Duration,Score,Notes\n';
   
   exerciseCompletions.forEach(completion => {
-    csv += `"${completion.completedAt}","${completion.activityType}","${completion.activityDetails.exerciseTitle || ''}","${completion.activityDetails.duration || 0}","${completion.activityDetails.gameScore || 0}","${completion.activityDetails.notes || ''}"\n`;
+    csv += `"${completion.completed_at}","${completion.activity_type}","${completion.activity_details.exerciseTitle || ''}","${completion.activity_details.duration || 0}","${completion.activity_details.gameScore || 0}","${completion.activity_details.notes || ''}"\n`;
   });
   
   csv += '\n\nJOURNAL ENTRIES\n';
@@ -252,11 +252,18 @@ export const saveAndShareData = async (data: ExportData, format: 'text' | 'csv' 
   try {
     const content = format === 'text' ? generateTextReport(data) : generateCSVData(data);
     const filename = `mind-ease-report-${new Date().toISOString().split('T')[0]}.${format === 'text' ? 'txt' : 'csv'}`;
-    const fileUri = `${Paths.cache.uri}${filename}`;
     
-    // Write the file to the device
-    await writeAsStringAsync(fileUri, content);
+    // Get the cache directory and create file
+    const directory = (FileSystem as any).cacheDirectory as string | null;
+    if (!directory) {
+      throw new Error('Cache directory not available');
+    }
+    const fileUri = directory + filename;
     
+    // Write content to the file
+    await FileSystem.writeAsStringAsync(fileUri, content, {
+      encoding: 'utf8',
+    });
     console.log('Report saved to:', fileUri);
     console.log('Content length:', content.length);
     

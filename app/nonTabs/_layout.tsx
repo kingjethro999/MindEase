@@ -37,22 +37,6 @@ export default function NonTabsLayout() {
         }} 
       />
       <Stack.Screen 
-        name="journalEntry" 
-        options={{ 
-          headerShown: false,
-          title: "Journal Entry",
-          presentation: "modal"
-        }} 
-      />
-      <Stack.Screen 
-        name="journalingEntry" 
-        options={{ 
-          headerShown: false,
-          title: "Journal Entry",
-          presentation: "modal"
-        }} 
-      />
-      <Stack.Screen 
         name="sleepTools" 
         options={{ 
           headerShown: false,
