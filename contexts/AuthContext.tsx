@@ -65,19 +65,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const offlineProfile: UserProfile = {
             id: dbProfile.id,
             email: dbProfile.email,
-            displayName: dbProfile.display_name,
-            ageRange: dbProfile.age_range,
-            primaryGoals: dbProfile.primary_goals,
+            display_name: dbProfile.display_name,
+            age_range: dbProfile.age_range,
+            primary_goals: dbProfile.primary_goals,
             timezone: dbProfile.timezone,
-            languagePreference: dbProfile.language_preference,
-            notificationPreferences: typeof dbProfile.notification_preferences === 'string' 
+            language_preference: dbProfile.language_preference,
+            notification_preferences: typeof dbProfile.notification_preferences === 'string' 
               ? JSON.parse(dbProfile.notification_preferences) 
               : dbProfile.notification_preferences,
-            onboardingCompleted: dbProfile.onboarding_completed,
-            premiumStatus: dbProfile.premium_status,
-            premiumExpiresAt: dbProfile.premium_expires_at,
-            createdAt: dbProfile.created_at,
-            updatedAt: dbProfile.updated_at
+            onboarding_completed: dbProfile.onboarding_completed,
+            premium_status: dbProfile.premium_status,
+            premium_expires_at: dbProfile.premium_expires_at,
+            created_at: dbProfile.created_at,
+            updated_at: dbProfile.updated_at,
+            synced: false
           };
 
           await saveUserProfile(offlineProfile);
@@ -96,21 +97,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const offlineProfile: UserProfile = {
           id: user.id,
           email: user.email || '',
-          displayName: user.user_metadata?.full_name || user.user_metadata?.display_name || '',
-          ageRange: existingProfile?.ageRange,
-          primaryGoals: existingProfile?.primaryGoals,
+          display_name: user.user_metadata?.full_name || user.user_metadata?.display_name || '',
+          age_range: existingProfile?.age_range,
+          primary_goals: existingProfile?.primary_goals,
           timezone: existingProfile?.timezone || 'UTC',
-          languagePreference: existingProfile?.languagePreference || 'en',
-          notificationPreferences: existingProfile?.notificationPreferences || {
-            dailyReminder: true,
+          language_preference: existingProfile?.language_preference || 'en',
+          notification_preferences: existingProfile?.notification_preferences || {
+            daily_reminder: true,
             affirmations: true,
-            weeklyReports: true
+            weekly_reports: true
           },
-          onboardingCompleted: existingProfile?.onboardingCompleted || false,
-          premiumStatus: existingProfile?.premiumStatus || false,
-          premiumExpiresAt: existingProfile?.premiumExpiresAt,
-          createdAt: user.created_at,
-          updatedAt: new Date().toISOString()
+          onboarding_completed: existingProfile?.onboarding_completed || false,
+          premium_status: existingProfile?.premium_status || false,
+          premium_expires_at: existingProfile?.premium_expires_at,
+          created_at: user.created_at,
+          updated_at: new Date().toISOString(),
+          synced : false
         };
         
         await saveUserProfile(offlineProfile);

@@ -32,9 +32,13 @@ export const AlertProvider: React.FC<AlertProviderProps> = ({ children }) => {
   });
 
   const showAlert = (props: Omit<CustomAlertProps, 'visible'>) => {
+    // Automatically use column layout if there are more than 2 buttons
+    const buttonLayout = props.buttons && props.buttons.length > 1 ? 'column' : (props.buttonLayout || 'row');
+    
     setAlertProps({
       ...props,
       visible: true,
+      buttonLayout,
     });
   };
 
@@ -46,38 +50,50 @@ export const AlertProvider: React.FC<AlertProviderProps> = ({ children }) => {
   };
 
   const showSuccess = (title: string, message: string, buttons?: AlertButton[]) => {
+    const defaultButtons = [{ text: 'OK', style: 'default' as const }];
+    const finalButtons = buttons || defaultButtons;
     showAlert({
       type: 'success',
       title,
       message,
-      buttons: buttons || [{ text: 'OK', style: 'default' }],
+      buttons: finalButtons,
+      buttonLayout: 'column',
     });
   };
 
   const showError = (title: string, message: string, buttons?: AlertButton[]) => {
+    const defaultButtons = [{ text: 'OK', style: 'default' as const }];
+    const finalButtons = buttons || defaultButtons;
     showAlert({
       type: 'error',
       title,
       message,
-      buttons: buttons || [{ text: 'OK', style: 'default' }],
+      buttons: finalButtons,
+      buttonLayout: 'column',
     });
   };
 
   const showWarning = (title: string, message: string, buttons?: AlertButton[]) => {
+    const defaultButtons = [{ text: 'OK', style: 'default' as const }];
+    const finalButtons = buttons || defaultButtons;
     showAlert({
       type: 'warning',
       title,
       message,
-      buttons: buttons || [{ text: 'OK', style: 'default' }],
+      buttons: finalButtons,
+      buttonLayout: 'column',
     });
   };
 
   const showInfo = (title: string, message: string, buttons?: AlertButton[]) => {
+    const defaultButtons = [{ text: 'OK', style: 'default' as const }];
+    const finalButtons = buttons || defaultButtons;
     showAlert({
       type: 'info',
       title,
       message,
-      buttons: buttons || [{ text: 'OK', style: 'default' }],
+      buttons: finalButtons,
+      buttonLayout: 'column',
     });
   };
 
@@ -105,6 +121,7 @@ export const AlertProvider: React.FC<AlertProviderProps> = ({ children }) => {
           onPress: onConfirm,
         },
       ],
+      buttonLayout: 'column',
     });
   };
 

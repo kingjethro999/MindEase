@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +15,7 @@ import { supabase } from '../../constants/supabase';
 import { useAlert } from '../../contexts/AlertContext';
 import { theme } from '../../theme/theme';
 import { userProfileUtils } from '../../utils/userProfile';
+import { SafeAreaView as SafeAreaViewRN } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -84,30 +84,13 @@ export default function LoginScreen() {
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!email) {
-      showError('Email Required', 'Please enter your email address first');
-      return;
-    }
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      
-      if (error) {
-        showError('Error', error.message);
-      } else {
-        showSuccess(
-          'Password Reset Sent',
-          'Check your email for password reset instructions'
-        );
-      }
-    } catch (error) {
-      showError('Error', 'Failed to send password reset email');
-    }
+  const handleForgotPassword = () => {
+    router.push('/auth/forgot-password' as any);
+    return;
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaViewRN style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
@@ -205,7 +188,7 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SafeAreaViewRN>
   );
 }
 
