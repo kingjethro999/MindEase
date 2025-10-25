@@ -92,7 +92,7 @@ export default function WeeklyReportScreen() {
     // Count mood occurrences
     const moodCounts: { [key: string]: number } = {};
     last7Days.forEach(entry => {
-      moodCounts[entry.primaryMood] = (moodCounts[entry.primaryMood] || 0) + 1;
+      moodCounts[entry.primary_mood] = (moodCounts[entry.primary_mood] || 0) + 1;
     });
 
     // Convert to percentages
@@ -112,12 +112,12 @@ export default function WeeklyReportScreen() {
       const entryDate = new Date(entry.date);
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      return entryDate >= weekAgo && entry.sleepHours;
+      return entryDate >= weekAgo && entry.sleep_hours;
     });
 
     if (last7Days.length === 0) return 0;
     
-    const totalSleep = last7Days.reduce((sum, entry) => sum + (entry.sleepHours || 0), 0);
+    const totalSleep = last7Days.reduce((sum, entry) => sum + (entry.sleep_hours || 0), 0);
     return Math.round((totalSleep / last7Days.length) * 10) / 10; // Round to 1 decimal
   };
 
@@ -145,7 +145,7 @@ export default function WeeklyReportScreen() {
 
     // Calculate mood intensity average
     const avgIntensity = last7Days.length > 0 
-      ? last7Days.reduce((sum, entry) => sum + entry.moodIntensity, 0) / last7Days.length 
+      ? last7Days.reduce((sum, entry) => sum + entry.mood_intensity, 0) / last7Days.length 
       : 0;
 
     // Check for mood patterns

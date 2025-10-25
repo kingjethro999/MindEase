@@ -9,6 +9,7 @@ import {
   Heart,
   Shield,
   TrendingUp,
+  Sparkles,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
@@ -32,6 +33,7 @@ interface NotificationOption {
   icon: any;
   gradient: string[];
   enabled: boolean;
+  badge?: string;
 }
 
 const NotificationOptInScreen: React.FC = () => {
@@ -43,12 +45,13 @@ const NotificationOptInScreen: React.FC = () => {
       icon: Heart,
       gradient: theme.colors.gradients.relaxationGreen,
       enabled: true,
+      badge: 'Recommended',
     },
     {
       id: 'affirmations',
       title: 'Daily Affirmations',
       description: 'Positive messages to brighten your day',
-      icon: Clock,
+      icon: Sparkles,
       gradient: theme.colors.gradients.breathingBlue,
       enabled: true,
     },
@@ -76,11 +79,10 @@ const NotificationOptInScreen: React.FC = () => {
 
   const requestNotificationPermission = async (): Promise<boolean> => {
     try {
-      // Use the notification service to request permissions
       const granted = await notificationService.requestPermissions();
       
       if (granted) {
-        // Initialize the notification service with default settings
+        // Only initialize, don't schedule notifications yet
         await notificationService.initialize();
         return true;
       }
@@ -120,13 +122,11 @@ const NotificationOptInScreen: React.FC = () => {
       }
     }
     
-    // Save notification preferences using the service
     const preferences = notificationOptions.reduce((acc, option) => ({
       ...acc,
       [option.id]: option.enabled
     }), {} as Record<string, boolean>);
     
-    // Map to service settings format
     const serviceSettings = {
       enabled: hasEnabledNotifications,
       dailyReminder: preferences['daily-mood'] || false,
@@ -135,10 +135,12 @@ const NotificationOptInScreen: React.FC = () => {
       exerciseReminders: preferences['exercise-reminders'] || false,
     };
     
+    // Save settings but don't schedule notifications yet
     await notificationService.saveSettings(serviceSettings);
     console.log('Notification preferences saved:', serviceSettings);
     
-    // Save notification permission and mark onboarding complete
+    // Note: Notifications will only be scheduled when user explicitly enables them in Settings
+    
     await onboardingUtils.saveNotificationPermission(true);
     await onboardingUtils.markOnboardingCompleted();
     
@@ -169,123 +171,167 @@ const NotificationOptInScreen: React.FC = () => {
     const IconComponent = option.icon;
     
     return (
-      <View key={option.id} style={styles.optionCard}>
-        <LinearGradient
-          colors={option.gradient as any}
-          style={styles.optionIconContainer}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <IconComponent size={20} color="white" />
-        </LinearGradient>
-        
-        <View style={styles.optionContent}>
-          <View style={styles.optionText}>
-            <Text style={styles.optionTitle}>{option.title}</Text>
+      <TouchableOpacity 
+        key={option.id} 
+        style={[styles.optionCard, option.enabled && styles.optionCardActive]}
+        onPress={() => toggleOption(option.id)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.optionLeft}>
+          <LinearGradient
+            colors={option.gradient as any}
+            style={styles.optionIconContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <IconComponent size={22} color="white" strokeWidth={2} />
+          </LinearGradient>
+          
+          <View style={styles.optionTextContainer}>
+            <View style={styles.optionTitleRow}>
+              <Text style={styles.optionTitle}>{option.title}</Text>
+              {option.badge && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{option.badge}</Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.optionDescription}>{option.description}</Text>
           </View>
-          
-          <Switch
-            value={option.enabled}
-            onValueChange={() => toggleOption(option.id)}
-            trackColor={{
-              false: theme.colors.border,
-              true: theme.colors.primary + '40',
-            }}
-            thumbColor={option.enabled ? theme.colors.primary : theme.colors.textLight}
-            ios_backgroundColor={theme.colors.border}
-          />
         </View>
-      </View>
+        
+        <Switch
+          value={option.enabled}
+          onValueChange={() => toggleOption(option.id)}
+          trackColor={{
+            false: theme.colors.border,
+            true: theme.colors.primary + '40',
+          }}
+          thumbColor={option.enabled ? theme.colors.primary : theme.colors.textLight}
+          ios_backgroundColor={theme.colors.border}
+        />
+      </TouchableOpacity>
     );
   };
 
   const enabledCount = notificationOptions.filter(option => option.enabled).length;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="dark" />
+      
+      {/* Fixed Header */}
+      <View style={styles.fixedHeader}>
+        <View style={styles.headerContent}>
+          <View style={styles.iconBadge}>
+            <Bell size={28} color={theme.colors.primary} strokeWidth={2} />
+          </View>
+          <Text style={styles.title}>Stay Connected</Text>
+          <Text style={styles.subtitle}>
+            Choose which notifications help you build healthy habits
+          </Text>
+        </View>
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { width: '66%' }]} />
+        </View>
+      </View>
+
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerIconContainer}>
-            <Bell size={24} color={theme.colors.primary} />
-          </View>
-          <Text style={styles.title}>Notification Preferences</Text>
-          <Text style={styles.subtitle}>
-            Choose which notifications you'd like to receive. You can change these anytime in Settings.
-          </Text>
-        </View>
-
         {/* Notification Options */}
         <View style={styles.optionsSection}>
-          {notificationOptions.map(renderNotificationOption)}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Notification Preferences</Text>
+            <View style={styles.selectionPill}>
+              <Text style={styles.selectionText}>
+                {enabledCount}/{notificationOptions.length}
+              </Text>
+            </View>
+          </View>
           
-          <View style={styles.selectionSummary}>
-            <Text style={styles.selectionText}>
-              {enabledCount} of {notificationOptions.length} notifications enabled
+          {notificationOptions.map(renderNotificationOption)}
+        </View>
+
+        {/* Feature Cards Grid */}
+        <View style={styles.featuresGrid}>
+          {/* Privacy Card */}
+          <View style={styles.featureCard}>
+            <View style={[styles.featureIcon, { backgroundColor: theme.colors.success + '15' }]}>
+              <Shield size={20} color={theme.colors.success} strokeWidth={2} />
+            </View>
+            <Text style={styles.featureTitle}>Privacy Protected</Text>
+            <Text style={styles.featureText}>
+              All notifications are generated locally on your device
+            </Text>
+          </View>
+
+          {/* Customizable Card */}
+          <View style={styles.featureCard}>
+            <View style={[styles.featureIcon, { backgroundColor: theme.colors.info + '15' }]}>
+              <Clock size={20} color={theme.colors.info} strokeWidth={2} />
+            </View>
+            <Text style={styles.featureTitle}>Fully Customizable</Text>
+            <Text style={styles.featureText}>
+              Change timing and preferences anytime in Settings
             </Text>
           </View>
         </View>
 
-        {/* Privacy Note */}
-        <View style={styles.privacyNote}>
-          <View style={styles.privacyHeader}>
-            <Shield size={16} color={theme.colors.success} />
-            <Text style={styles.privacyTitle}>Privacy Protected</Text>
-          </View>
-          <Text style={styles.privacyText}>
-            All notifications are generated locally on your device. We never share your personal information or mood data with third parties.
-          </Text>
-        </View>
-
         {/* Benefits Section */}
-        <View style={styles.benefitsSection}>
-          <Text style={styles.benefitsTitle}>Benefits of enabling notifications:</Text>
+        <View style={styles.benefitsCard}>
+          <Text style={styles.benefitsTitle}>Why enable notifications?</Text>
           <View style={styles.benefitsList}>
             <View style={styles.benefitItem}>
-              <Text style={styles.benefitBullet}>•</Text>
+              <View style={styles.benefitDot} />
               <Text style={styles.benefitText}>Build consistent daily habits</Text>
             </View>
             <View style={styles.benefitItem}>
-              <Text style={styles.benefitBullet}>•</Text>
+              <View style={styles.benefitDot} />
               <Text style={styles.benefitText}>Receive personalized insights</Text>
             </View>
             <View style={styles.benefitItem}>
-              <Text style={styles.benefitBullet}>•</Text>
+              <View style={styles.benefitDot} />
               <Text style={styles.benefitText}>Track your progress over time</Text>
             </View>
             <View style={styles.benefitItem}>
-              <Text style={styles.benefitBullet}>•</Text>
+              <View style={styles.benefitDot} />
               <Text style={styles.benefitText}>Get gentle support when you need it</Text>
             </View>
           </View>
         </View>
+
+        <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      {/* Action Buttons */}
-      <View style={styles.actionButtons}>
-        <TouchableOpacity 
-          style={styles.getStartedButton} 
+      {/* Fixed Bottom Action */}
+      <View style={styles.bottomAction}>
+        <TouchableOpacity
+          style={[
+            styles.getStartedButton,
+            isRequestingPermission && styles.getStartedButtonDisabled,
+          ]}
           onPress={handleGetStarted}
           disabled={isRequestingPermission}
+          activeOpacity={0.8}
         >
           <Text style={styles.getStartedButtonText}>
-            {isRequestingPermission ? 'Setting up...' : 'Get Started'}
+            {isRequestingPermission ? 'Setting up...' : 'Continue'}
           </Text>
-          {!isRequestingPermission && <ArrowRight size={18} color="white" />}
+          {!isRequestingPermission && (
+            <ArrowRight size={20} color="#fff" strokeWidth={2.5} />
+          )}
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.skipButton} 
+        <TouchableOpacity
+          style={styles.skipButton}
           onPress={handleSkip}
           disabled={isRequestingPermission}
+          activeOpacity={0.6}
         >
-          <Text style={styles.skipButtonText}>Skip for now</Text>
+          <Text style={styles.skipButtonText}>I'll set this up later</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -295,176 +341,251 @@ const NotificationOptInScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.backgroundLight,
   },
-  scrollView: {
-    flex: 1,
+  fixedHeader: {
+    backgroundColor: '#fff',
+    paddingTop: theme.spacing.md,
+    paddingBottom: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
-  scrollContent: {
-    paddingBottom: theme.spacing.md,
-  },
-  header: {
-    padding: theme.spacing.md,
+  headerContent: {
     alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
   },
-  headerIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: theme.colors.primary + '20',
+  iconBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.colors.primary + '10',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
   },
   title: {
-    fontSize: theme.typography.fontSize.h2,
-    fontWeight: theme.typography.fontWeight.bold as any,
+    fontSize: 28,
+    fontWeight: '700',
     color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-    textAlign: 'center',
+    marginBottom: theme.spacing.xs,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: theme.typography.fontSize.caption,
+    fontSize: 15,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    lineHeight: theme.typography.lineHeight.caption,
+    lineHeight: 22,
+  },
+  progressBar: {
+    height: 3,
+    backgroundColor: theme.colors.backgroundLight,
+    width: '100%',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: theme.colors.primary,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: theme.spacing.lg,
   },
   optionsSection: {
-    paddingHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: theme.spacing.md,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: theme.colors.text,
+    letterSpacing: -0.3,
+  },
+  selectionPill: {
+    backgroundColor: theme.colors.primary + '15',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  selectionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.primary,
   },
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    padding: theme.spacing.md,
     marginBottom: theme.spacing.sm,
-    padding: theme.spacing.sm,
-    borderRadius: theme.borderRadius.sm,
-    backgroundColor: theme.colors.background,
-    ...theme.shadows.sm,
+  },
+  optionCardActive: {
+    borderColor: theme.colors.primary + '30',
+    backgroundColor: theme.colors.primary + '03',
+  },
+  optionLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: theme.spacing.sm,
   },
   optionIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.sm,
   },
-  optionContent: {
+  optionTextContainer: {
     flex: 1,
+  },
+  optionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  optionText: {
-    flex: 1,
-    marginRight: theme.spacing.sm,
+    marginBottom: 4,
   },
   optionTitle: {
-    fontSize: theme.typography.fontSize.caption,
-    fontWeight: theme.typography.fontWeight.medium as any,
+    fontSize: 15,
+    fontWeight: '600',
     color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
+    letterSpacing: -0.2,
+    marginRight: theme.spacing.xs,
+  },
+  badge: {
+    backgroundColor: theme.colors.accent + '20',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: theme.colors.accent,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   optionDescription: {
-    fontSize: theme.typography.fontSize.small,
+    fontSize: 13,
     color: theme.colors.textSecondary,
-    lineHeight: theme.typography.lineHeight.small,
+    lineHeight: 18,
   },
-  selectionSummary: {
-    alignItems: 'center',
-    marginTop: theme.spacing.sm,
-  },
-  selectionText: {
-    fontSize: theme.typography.fontSize.small,
-    color: theme.colors.textSecondary,
-    fontWeight: theme.typography.fontWeight.medium as any,
-  },
-  privacyNote: {
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    padding: theme.spacing.sm,
-    backgroundColor: theme.colors.success + '10',
-    borderRadius: theme.borderRadius.sm,
-    borderLeftWidth: 3,
-    borderLeftColor: theme.colors.success,
-  },
-  privacyHeader: {
+  featuresGrid: {
     flexDirection: 'row',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+  },
+  featureCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    padding: theme.spacing.md,
+  },
+  featureIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.xs,
-  },
-  privacyTitle: {
-    fontSize: theme.typography.fontSize.caption,
-    fontWeight: theme.typography.fontWeight.medium as any,
-    color: theme.colors.text,
-    marginLeft: theme.spacing.xs,
-  },
-  privacyText: {
-    fontSize: theme.typography.fontSize.small,
-    color: theme.colors.text,
-    lineHeight: theme.typography.lineHeight.small,
-  },
-  benefitsSection: {
-    marginHorizontal: theme.spacing.md,
-    padding: theme.spacing.sm,
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: theme.borderRadius.sm,
-  },
-  benefitsTitle: {
-    fontSize: theme.typography.fontSize.caption,
-    fontWeight: theme.typography.fontWeight.medium as any,
-    color: theme.colors.text,
     marginBottom: theme.spacing.sm,
   },
+  featureTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: 4,
+    letterSpacing: -0.2,
+  },
+  featureText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    lineHeight: 17,
+  },
+  benefitsCard: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    padding: theme.spacing.md,
+  },
+  benefitsTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
+    letterSpacing: -0.2,
+  },
   benefitsList: {
-    marginTop: theme.spacing.xs,
+    gap: theme.spacing.xs,
   },
   benefitItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: theme.spacing.xs,
+    alignItems: 'center',
   },
-  benefitBullet: {
-    fontSize: theme.typography.fontSize.small,
-    color: theme.colors.primary,
+  benefitDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.colors.primary,
     marginRight: theme.spacing.sm,
-    width: 10,
   },
   benefitText: {
     flex: 1,
-    fontSize: theme.typography.fontSize.small,
+    fontSize: 14,
     color: theme.colors.textSecondary,
-    lineHeight: theme.typography.lineHeight.small,
+    lineHeight: 20,
   },
-  actionButtons: {
-    paddingHorizontal: theme.spacing.md,
+  bottomSpacer: {
+    height: 100,
+  },
+  bottomAction: {
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    padding: theme.spacing.lg,
     paddingBottom: theme.spacing.md,
-    backgroundColor: theme.colors.background,
   },
   getStartedButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.primary,
+    borderRadius: 12,
     padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
+    height: 56,
     marginBottom: theme.spacing.sm,
-    ...theme.shadows.sm,
+  },
+  getStartedButtonDisabled: {
+    opacity: 0.6,
   },
   getStartedButtonText: {
-    color: 'white',
-    fontSize: theme.typography.fontSize.body,
-    fontWeight: theme.typography.fontWeight.medium as any,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
     marginRight: theme.spacing.sm,
+    letterSpacing: -0.2,
   },
   skipButton: {
     alignItems: 'center',
     padding: theme.spacing.sm,
   },
   skipButtonText: {
+    fontSize: 14,
     color: theme.colors.textSecondary,
-    fontSize: theme.typography.fontSize.caption,
+    fontWeight: '500',
   },
 });
 
-export default NotificationOptInScreen
+export default NotificationOptInScreen;

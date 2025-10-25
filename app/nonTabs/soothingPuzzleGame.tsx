@@ -93,8 +93,9 @@ export default function SoothingPuzzleGame() {
   const generatePuzzlePieces = (level: PuzzleLevel): PuzzlePiece[] => {
     const pieces: PuzzlePiece[] = [];
     const gridSize = Math.sqrt(level.pieces);
-    const pieceSize = (width - 60) / gridSize;
+    const pieceSize = 60; // Fixed size for better visibility
     
+    // Create correct positions in a grid
     for (let i = 0; i < level.pieces; i++) {
       const row = Math.floor(i / gridSize);
       const col = i % gridSize;
@@ -102,9 +103,9 @@ export default function SoothingPuzzleGame() {
       pieces.push({
         id: i,
         x: Math.random() * (width - pieceSize - 40) + 20,
-        y: Math.random() * (height * 0.4) + height * 0.3,
-        correctX: col * pieceSize + 30,
-        correctY: row * pieceSize + 200,
+        y: Math.random() * (height * 0.3) + height * 0.1,
+        correctX: col * pieceSize + (width - gridSize * pieceSize) / 2,
+        correctY: row * pieceSize + 150,
         color: level.colors[i],
         isPlaced: false,
         scale: new Animated.Value(1),
@@ -158,7 +159,7 @@ export default function SoothingPuzzleGame() {
       ]).start();
 
       // Check if piece is in correct position
-      const tolerance = 30;
+      const tolerance = 40;
       const isCorrect = 
         Math.abs(piece.x - piece.correctX) < tolerance &&
         Math.abs(piece.y - piece.correctY) < tolerance;
@@ -168,7 +169,6 @@ export default function SoothingPuzzleGame() {
         piece.isPlaced = true;
         piece.x = piece.correctX;
         piece.y = piece.correctY;
-        
 
         // Animate successful placement
         Animated.parallel([
@@ -276,19 +276,19 @@ export default function SoothingPuzzleGame() {
       
       // Save game completion
       const completionData = {
-        userId,
-        activityType: 'game_session' as const,
-        activityDetails: {
-          exerciseId: 'soothing-puzzle',
-          exerciseTitle: `Soothing Puzzle - ${level.name}`,
-          exerciseType: 'puzzle_game',
+        user_id: userId,  
+        activity_type: "game_session" as const,  
+        activity_details: { 
+          exerciseId: `puzzle_${level.id}`,
+          exerciseTitle: `Puzzle: ${level.name}`,
+          exerciseType: 'puzzle',
           duration: gameDuration,
           gameScore: finalScore,
           gameLevel: level.id,
           notes: `Completed ${level.name} with ${moves} moves and ${accuracy}% accuracy`
         },
-        completedAt: new Date().toISOString(),
-        streakCount: 1
+        completed_at: new Date().toISOString(),  
+        streak_count: 1 
       };
 
       await saveExerciseCompletion(completionData);
@@ -330,7 +330,7 @@ export default function SoothingPuzzleGame() {
                 visible: true,
                 type: 'achievement',
                 title: 'Achievement Unlocked! 🏆',
-                message: `${achievement.badgeName}: ${achievement.badgeDescription}`,
+                message: `${achievement.badge_name}: ${achievement.badge_description}`,
                 onDismiss: () => setNotification(null)
               });
             }, index * 2000);
@@ -444,6 +444,30 @@ export default function SoothingPuzzleGame() {
 
             {/* Puzzle Grid */}
             <View style={styles.puzzleGrid}>
+              {/* Target area outline */}
+              <View style={styles.targetArea}>
+                {Array.from({ length: currentLevelData.pieces }, (_, index) => {
+                  const gridSize = Math.sqrt(currentLevelData.pieces);
+                  const row = Math.floor(index / gridSize);
+                  const col = index % gridSize;
+                  const pieceSize = 60;
+                  
+                  return (
+                    <View
+                      key={`target-${index}`}
+                      style={[
+                        styles.targetSlot,
+                        {
+                          left: col * pieceSize + (width - gridSize * pieceSize) / 2,
+                          top: row * pieceSize + 150,
+                          width: pieceSize,
+                          height: pieceSize,
+                        }
+                      ]}
+                    />
+                  );
+                })}
+              </View>
               {puzzlePieces.map(renderPuzzlePiece)}
             </View>
 
@@ -587,6 +611,20 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
     margin: theme.spacing.lg,
+  },
+  targetArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  targetSlot: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderStyle: 'dashed',
+    borderRadius: theme.borderRadius.md,
   },
   puzzlePiece: {
     position: 'absolute',

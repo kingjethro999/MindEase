@@ -16,6 +16,7 @@ import { theme } from '../../theme/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { saveExerciseCompletion } from '../../utils/offlineStorage';
 import { awardExperience, checkAchievements, saveAchievement } from '../../utils/gamification';
+import { gameEventManager } from '../../utils/gameEvents';
 import { NotificationBanner } from '../../components/NotificationBanner';
 
 const { width, height } = Dimensions.get('window');
@@ -52,32 +53,23 @@ export default function TicTacToeGame() {
   const [score, setScore] = useState({ player1: 0, player2: 0, draws: 0 });
   const [isPaused, setIsPaused] = useState(false);
   const [notification, setNotification] = useState<any>(null);
+  const [isRobotThinking, setIsRobotThinking] = useState(false);
   
-  const boardAnimations = useRef<Animated.Value[]>([]).current;
-
-  // Initialize board animations
-  useEffect(() => {
-    for (let i = 0; i < 9; i++) {
-      boardAnimations[i] = new Animated.Value(0);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Component cleanup
-    return () => {
-      // Cleanup if needed
-    };
-  }, []);
+  const boardAnimations = useRef<Animated.Value[]>(
+    Array.from({ length: 9 }, () => new Animated.Value(0))
+  ).current;
 
   const selectGameMode = (mode: GameMode) => {
-    setGameBoard(prev => ({
-      ...prev,
-      gameMode: mode,
+    setGameBoard({
+      squares: Array(9).fill(null),
       currentPlayer: 'X',
+      winner: null,
+      gameMode: mode,
       player1Symbol: 'X',
       player2Symbol: 'O',
-      isPlayer1Turn: true
-    }));
+      isPlayer1Turn: true,
+      moves: 0
+    });
     setGameState('playing');
     
     // Animate board appearance
@@ -92,16 +84,19 @@ export default function TicTacToeGame() {
   };
 
   const resetGame = () => {
-    setGameBoard(prev => ({
-      ...prev,
+    setGameBoard({
       squares: Array(9).fill(null),
       currentPlayer: 'X',
       winner: null,
+      gameMode: null,
+      player1Symbol: 'X',
+      player2Symbol: 'O',
       isPlayer1Turn: true,
       moves: 0
-    }));
+    });
     setGameState('selecting');
     setIsPaused(false);
+    setIsRobotThinking(false);
     
     // Reset animations
     boardAnimations.forEach(anim => {
@@ -129,17 +124,13 @@ export default function TicTacToeGame() {
     return squares.every(square => square !== null);
   };
 
-  const getBestMove = (squares: Player[]): number => {
-    // Simple AI logic - try to win, then block, then take center, then corners, then edges
-    const player = gameBoard.player2Symbol;
-    const opponent = gameBoard.player1Symbol;
-
+  const getBestMove = (squares: Player[], playerSymbol: Player, opponentSymbol: Player): number => {
     // Try to win
     for (let i = 0; i < 9; i++) {
       if (squares[i] === null) {
         const newSquares = [...squares];
-        newSquares[i] = player;
-        if (checkWinner(newSquares) === player) {
+        newSquares[i] = playerSymbol;
+        if (checkWinner(newSquares) === playerSymbol) {
           return i;
         }
       }
@@ -149,8 +140,8 @@ export default function TicTacToeGame() {
     for (let i = 0; i < 9; i++) {
       if (squares[i] === null) {
         const newSquares = [...squares];
-        newSquares[i] = opponent;
-        if (checkWinner(newSquares) === opponent) {
+        newSquares[i] = opponentSymbol;
+        if (checkWinner(newSquares) === opponentSymbol) {
           return i;
         }
       }
@@ -161,22 +152,62 @@ export default function TicTacToeGame() {
 
     // Take corners
     const corners = [0, 2, 6, 8];
-    for (let corner of corners) {
-      if (squares[corner] === null) return corner;
+    const availableCorners = corners.filter(corner => squares[corner] === null);
+    if (availableCorners.length > 0) {
+      return availableCorners[Math.floor(Math.random() * availableCorners.length)];
     }
 
     // Take edges
     const edges = [1, 3, 5, 7];
-    for (let edge of edges) {
-      if (squares[edge] === null) return edge;
+    const availableEdges = edges.filter(edge => squares[edge] === null);
+    if (availableEdges.length > 0) {
+      return availableEdges[Math.floor(Math.random() * availableEdges.length)];
     }
 
     return -1; // No moves available
   };
 
-  const makeMove = async (index: number) => {
-    if (gameBoard.squares[index] || gameBoard.winner || isPaused) return;
+  // Robot move effect - triggered when it's robot's turn
+  useEffect(() => {
+    if (
+      gameBoard.gameMode === 'vs-robot' &&
+      !gameBoard.isPlayer1Turn &&
+      !gameBoard.winner &&
+      !isPaused &&
+      !isRobotThinking
+    ) {
+      setIsRobotThinking(true);
+      const timer = setTimeout(() => {
+        const robotMove = getBestMove(
+          gameBoard.squares,
+          gameBoard.player2Symbol,
+          gameBoard.player1Symbol
+        );
+        if (robotMove !== -1) {
+          makeMove(robotMove);
+        }
+        setIsRobotThinking(false);
+      }, 800);
 
+      return () => clearTimeout(timer);
+    }
+  }, [gameBoard.isPlayer1Turn, gameBoard.winner, isPaused, gameBoard.gameMode]);
+
+  const makeMove = (index: number) => {
+    // Prevent move if square is occupied, game is over, paused, or robot is thinking
+    if (
+      gameBoard.squares[index] !== null ||
+      gameBoard.winner !== null ||
+      isPaused ||
+      isRobotThinking
+    ) {
+      return;
+    }
+
+    // In vs-robot mode, prevent player from moving during robot's turn
+    if (gameBoard.gameMode === 'vs-robot' && !gameBoard.isPlayer1Turn) {
+      return;
+    }
 
     const newSquares = [...gameBoard.squares];
     newSquares[index] = gameBoard.currentPlayer;
@@ -199,17 +230,17 @@ export default function TicTacToeGame() {
     const moves = gameBoard.moves + 1;
     const isDraw = !winner && isBoardFull(newSquares);
 
-    setGameBoard(prev => ({
-      ...prev,
-      squares: newSquares,
-      moves,
-      winner: winner || (isDraw ? 'draw' : null)
-    }));
-
     if (winner || isDraw) {
       // Game ended
+      setGameBoard(prev => ({
+        ...prev,
+        squares: newSquares,
+        moves,
+        winner: winner || 'draw'
+      }));
+
       setTimeout(() => {
-        handleGameEnd(winner, isDraw);
+        handleGameEnd(winner, isDraw, newSquares);
       }, 500);
     } else {
       // Switch turns
@@ -218,23 +249,15 @@ export default function TicTacToeGame() {
       
       setGameBoard(prev => ({
         ...prev,
+        squares: newSquares,
+        moves,
         currentPlayer: nextPlayer,
         isPlayer1Turn
       }));
-
-      // If playing against robot and it's robot's turn
-      if (gameBoard.gameMode === 'vs-robot' && !isPlayer1Turn) {
-        setTimeout(() => {
-          const robotMove = getBestMove(newSquares);
-          if (robotMove !== -1) {
-            makeMove(robotMove);
-          }
-        }, 800);
-      }
     }
   };
 
-  const handleGameEnd = async (winner: Winner, isDraw: boolean) => {
+  const handleGameEnd = async (winner: Winner, isDraw: boolean, finalSquares: Player[]) => {
     let newScore = { ...score };
     
     if (isDraw) {
@@ -271,9 +294,9 @@ export default function TicTacToeGame() {
       const gameDuration = gameBoard.moves * 2; // Rough estimate
       
       const completionData = {
-        userId,
-        activityType: 'game_session' as const,
-        activityDetails: {
+        user_id: userId,
+        activity_type: 'game_session' as const,
+        activity_details: {
           exerciseId: 'tic-tac-toe',
           exerciseTitle: 'Tic-Tac-Toe',
           exerciseType: 'strategy_game',
@@ -282,19 +305,26 @@ export default function TicTacToeGame() {
           gameLevel: 1,
           notes: `Game mode: ${gameBoard.gameMode}, Winner: ${isDraw ? 'draw' : winner}, Moves: ${gameBoard.moves}`
         },
-        completedAt: new Date().toISOString(),
-        streakCount: 1
+        completed_at: new Date().toISOString(),
+        streak_count: 1
       };
 
-      await saveExerciseCompletion(completionData);
+      await saveExerciseCompletion(completionData as any);
+      console.log('Tic-Tac-Toe game completion saved:', completionData);
+
+      // Award experience points
+      const expAwarded = awardExperience('game_session', gameDuration);
+      console.log(`Awarded ${expAwarded} XP for tic-tac-toe game`);
 
       // Check for achievements
       const completions = await import('../../utils/offlineStorage').then(m => m.getExerciseCompletions());
+      console.log('Total completions for achievement check:', completions.length);
       const newAchievements = await checkAchievements(userId, completions);
+      console.log('New achievements found:', newAchievements.length);
       
       // Save new achievements
       for (const achievement of newAchievements) {
-        await saveAchievement(achievement);
+        await saveAchievement(achievement as any);
       }
 
       // Show achievement notifications
@@ -306,13 +336,16 @@ export default function TicTacToeGame() {
                 visible: true,
                 type: 'achievement',
                 title: 'Achievement Unlocked! 🏆',
-                message: `${achievement.badgeName}: ${achievement.badgeDescription}`,
+                message: `${achievement.badge_name}: ${achievement.badge_description}`,
                 onDismiss: () => setNotification(null)
               });
             }, index * 2000);
           });
         }, 2000);
       }
+
+      // Notify other parts of the app about game completion
+      gameEventManager.notifyGameCompletion('tic-tac-toe', newScore.player1 * 100 + newScore.player2 * 50, gameDuration);
 
     } catch (error) {
       console.error('Error saving game data:', error);
@@ -334,10 +367,10 @@ export default function TicTacToeGame() {
         style={[
           styles.square,
           {
-            opacity: boardAnimations[index] || 0,
+            opacity: boardAnimations[index],
             transform: [
               {
-                scale: boardAnimations[index] || 0,
+                scale: boardAnimations[index],
               },
             ],
           },
@@ -532,7 +565,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   modeCards: {
-    flexDirection: 'row',
     gap: theme.spacing.lg,
   },
   modeCard: {

@@ -268,9 +268,9 @@ export default function BreathingSyncGame() {
       
       // Save game completion
       const completionData = {
-        userId,
-        activityType: 'game_session' as const,
-        activityDetails: {
+        user_id: userId,
+        activity_type: 'game_session' as const,
+        activity_details: {
           exerciseId: 'breathing-sync',
           exerciseTitle: 'Breathing Sync Game',
           exerciseType: 'breathing_game',
@@ -279,8 +279,8 @@ export default function BreathingSyncGame() {
           gameLevel: 1,
           notes: `Completed ${totalCycles} breathing cycles with max streak of ${maxStreak}`
         },
-        completedAt: new Date().toISOString(),
-        streakCount: 1
+        completed_at: new Date().toISOString(),
+        streak_count: 1
       };
 
       await saveExerciseCompletion(completionData);
@@ -312,7 +312,7 @@ export default function BreathingSyncGame() {
                 visible: true,
                 type: 'achievement',
                 title: 'Achievement Unlocked! 🏆',
-                message: `${achievement.badgeName}: ${achievement.badgeDescription}`,
+                message: `${achievement.badge_name}: ${achievement.badge_description}`,
                 onDismiss: () => setNotification(null)
               });
             }, index * 2000);

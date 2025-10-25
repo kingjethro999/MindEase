@@ -56,14 +56,16 @@ export default function DetailedMoodLogScreen() {
 
       // Create mood entry in database format
       const moodEntry: Omit<MoodEntry, 'id' | 'createdAt' | 'synced'> = {
+        user_id: userId,
         date: today,
-        primaryMood: selectedMood as 'happy' | 'calm' | 'bored' | 'tired' | 'irritated' | 'crying' | 'angry',
-        moodIntensity: moodIntensity,
+        primary_mood: selectedMood as 'happy' | 'calm' | 'tired' | 'neutral' | 'anxious' | 'sad' | 'irritable',
+        mood_intensity: moodIntensity,
         notes: notes.trim() || undefined,
         triggers: selectedTriggers.length > 0 ? selectedTriggers : undefined,
-        energyLevel: energyLevel as 'low' | 'normal' | 'high' | undefined,
-        sleepQuality: sleepQuality as 'poor' | 'fair' | 'good' | undefined,
-        sleepHours: sleepHours ? parseFloat(sleepHours) : undefined
+        energy_level: energyLevel as 'low' | 'normal' | 'high' | undefined,
+        sleep_quality: sleepQuality as 'poor' | 'fair' | 'good' | undefined,
+        sleep_hours: sleepHours ? parseFloat(sleepHours) : undefined,
+        created_at: new Date().toISOString(),
       };
 
       // Save to offline storage
